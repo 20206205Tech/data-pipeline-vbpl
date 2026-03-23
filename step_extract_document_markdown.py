@@ -3,8 +3,8 @@ from datetime import datetime
 
 import dlt
 import psycopg2
-from bs4 import BeautifulSoup
 from loguru import logger
+from markdownify import markdownify
 
 import env
 import workflow_config
@@ -21,25 +21,24 @@ config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 
 
-def extract_clean_content(item_id, html_content):
+def convert_html_to_markdown(html_content):
+    """Chuyển đổi HTML sang Markdown với cấu hình chuẩn"""
     try:
-        soup = BeautifulSoup(html_content, "lxml")
-        content_div = soup.find("div", id="toanvancontent")
-        if not content_div:
+        if not html_content:
             return None
-        return str(content_div)
+        return markdownify(html_content, heading_style="ATX", strip=["script", "style"])
     except Exception as e:
-        logger.error(f"Lỗi parse nội dung {item_id}: {e}")
+        logger.error(f"Lỗi chuyển đổi Markdown: {e}")
         return None
 
 
 @dlt.resource(
-    name="document_content",
+    name="document_markdown",
     write_disposition="merge",
     primary_key="item_id",
     columns={"update_at": {"dedup_sort": "desc"}},
 )
-def document_content_resource(success_item_ids: list, error_item_ids: list):
+def document_markdown_resource(success_item_ids: list, error_item_ids: list):
     try:
         drive_service = get_drive_service()
         conn = psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
@@ -51,87 +50,84 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
         )
 
         if not pending_item_ids:
-            logger.info("🎉 Không có dữ liệu mới cần trích xuất nội dung.")
+            logger.info("🎉 Không có dữ liệu Markdown mới cần xử lý.")
             return
 
         for item_id in pending_item_ids:
-            file_name = f"{item_id}.html"
+            file_name = f"{item_id}.md"
             file_path = os.path.join(PATH_FOLDER_OUTPUT, file_name)
 
             try:
-                _, raw_drive_id = get_existing_hash_from_db(
-                    conn, "document_detail", item_id, "file_hash", "drive_id"
-                )
-
-                if not raw_drive_id:
-                    logger.warning(f"Bỏ qua {item_id}: Không tìm thấy drive_id gốc.")
-                    error_item_ids.append(item_id)
-                    continue
-
-                logger.info(f"Đang xử lý nội dung cho: {item_id}")
-
-                # 2. Tải HTML thô từ Drive và trích xuất nội dung
-                html_bytes = download_from_drive(drive_service, raw_drive_id)
-                html_text = html_bytes.decode("utf-8")
-
-                clean_html = extract_clean_content(item_id, html_text)
-
-                if not clean_html:
-                    logger.warning(
-                        f"⚠️ Không tìm thấy thẻ div#toanvancontent cho {item_id}"
-                    )
-                    error_item_ids.append(item_id)
-                    continue
-
-                # 3. Tính toán Hash của nội dung ĐÃ CLEAN
-                new_content_hash = calculate_string_hash(clean_html)
-
-                # Lấy hash và drive_id của nội dung ĐÃ CLEAN (từ bảng document_content)
-                old_content_hash, old_clean_drive_id = get_existing_hash_from_db(
+                _, drive_content_file_id = get_existing_hash_from_db(
                     conn, "document_content", item_id, "file_hash", "drive_id"
                 )
 
-                # THÀNH CÔNG 1: Nội dung clean không thay đổi
-                if old_content_hash == new_content_hash:
-                    logger.info(f"⏭️ Bỏ qua {item_id} vì nội dung clean không đổi.")
-                    success_item_ids.append(item_id)
-                    continue
-
-                # 4. Ghi file nội dung clean ra thư mục local
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(clean_html)
-                logger.info(f"💾 Đã lưu file clean tại: {file_path}")
-
-                # 5. Upload file clean lên thư mục Drive MỚI
-                new_clean_drive_id = upload_to_drive(
-                    drive_service, file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
-                )
-
-                # LỖI: Upload file clean thất bại
-                if not new_clean_drive_id:
-                    logger.error(f"❌ Upload file clean thất bại cho {item_id}")
+                if not drive_content_file_id:
+                    logger.warning(f"Không tìm thấy drive_id nội dung cho {item_id}")
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG 2: Upload file clean mới thành công -> Yield
+                logger.info(f"Đang xử lý Markdown cho item: {item_id}")
+
+                html_bytes = download_from_drive(drive_service, drive_content_file_id)
+                html_text = html_bytes.decode("utf-8")
+
+                md_content = convert_html_to_markdown(html_text)
+
+                if not md_content:
+                    logger.warning(f"⚠️ Không thể tạo markdown content cho {item_id}")
+                    error_item_ids.append(item_id)
+                    continue
+
+                new_file_hash = calculate_string_hash(md_content)
+
+                # Kiểm tra hash cũ trong database
+                old_hash, _ = get_existing_hash_from_db(
+                    conn, "document_markdown", item_id, "file_hash", "drive_id"
+                )
+
+                # THÀNH CÔNG 1: Markdown không thay đổi -> Bỏ qua
+                if old_hash == new_file_hash:
+                    logger.info(f"⏭️ Bỏ qua {item_id} vì nội dung Markdown không đổi.")
+                    success_item_ids.append(item_id)
+                    continue
+
+                # TIẾN HÀNH: Ghi file local
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(md_content)
+                logger.info(f"💾 Đã lưu file local: {file_path}")
+
+                # Upload lên Google Drive
+                new_drive_id = upload_to_drive(
+                    drive_service, file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
+                )
+
+                if not new_drive_id:
+                    logger.error(f"❌ Upload thất bại Markdown cho {item_id}")
+                    error_item_ids.append(item_id)  # Ghi nhận lỗi
+                    continue
+
+                # THÀNH CÔNG 2: Upload mới thành công
                 logger.success(
-                    f"✅ Đã upload file clean {item_id} (Drive ID: {new_clean_drive_id})"
+                    f"✅ Đã upload Markdown cho {item_id} (Drive ID: {new_drive_id})"
                 )
                 success_item_ids.append(item_id)
 
                 yield {
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
-                    "drive_id": new_clean_drive_id,
-                    "file_hash": new_content_hash,  # Lưu hash của nội dung clean
+                    "drive_id": new_drive_id,
+                    "file_hash": new_file_hash,
                 }
 
             except Exception as e:
                 logger.error(f"💥 Thất bại tại item {item_id}: {e}")
-                error_item_ids.append(item_id)
+                error_item_ids.append(item_id)  # Ghi nhận lỗi có Exception
 
-    except Exception as e:
-        logger.error(f"Lỗi khi truy vấn DB: {e}")
+    except psycopg2.errors.UndefinedTable as e:
+        logger.warning(f"Bảng chưa tồn tại hoặc lỗi SQL: {e}")
+        if conn:
+            conn.rollback()
     finally:
         if conn:
             conn.close()
@@ -148,7 +144,7 @@ def main():
     error_item_ids = []
     start_time = datetime.now()
 
-    info = pipeline.run(document_content_resource(success_item_ids, error_item_ids))
+    info = pipeline.run(document_markdown_resource(success_item_ids, error_item_ids))
     logger.info(f"Kết quả pipeline: {info}")
 
     if success_item_ids:
