@@ -45,6 +45,22 @@ GOOGLE_DRIVE_TOKEN = env.str("GOOGLE_DRIVE_TOKEN")
 GOOGLE_DRIVE_FOLDER_ID = env.str("GOOGLE_DRIVE_FOLDER_ID")
 
 
+# GEMINI_API_KEY = env.str("GEMINI_API_KEY")
+# NVIDIA_API_KEY = env.str("NVIDIA_API_KEY")
+# CLOUDFLARE_ACCOUNT_ID = env.str("CLOUDFLARE_ACCOUNT_ID")
+# CLOUDFLARE_API_TOKEN = env.str("CLOUDFLARE_API_TOKEN")
+
+OLLAMA_URL = "https://ollama.20206205.tech"
+OLLAMA_URL = "http://localhost:11434"
+OLLAMA_URL = "https://colab.20206205.tech"
+
+
+# # CRAWL_DATA_VBPL_DATABASE_URL = env.str("CRAWL_DATA_VBPL_DATABASE_URL")
+# CRAWL_DATA_VBPL_GOOGLE_DRIVE_DETAIL_FOLDER_ID = env.str(
+#     "CRAWL_DATA_VBPL_GOOGLE_DRIVE_DETAIL_FOLDER_ID"
+# )
+
+
 print("*" * 100)
 for key, value in list(globals().items()):
     if key.isupper():

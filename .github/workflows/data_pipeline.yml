@@ -106,3 +106,10 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           doppler run -p 20206205tech -c prd -- uv run python step_extract_document_markdown.py
+
+      - name: step_rag_summary
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.step_rag_summary == true }}
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run -p 20206205tech -c prd -- uv run python step_rag_summary.py

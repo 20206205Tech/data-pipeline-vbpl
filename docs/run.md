@@ -23,10 +23,13 @@ doppler run -- python step_extract_document_info.py
 doppler run -- python step_extract_document_content.py
 doppler run -- python step_extract_document_markdown.py
 
+<!--  -->
+
+doppler run -- python step_rag_summary.py
+
 <!-- doppler run -- python step_rag_chunk.py -->
 
 <!-- doppler run -- python step_rag_chunking.py -->
-<!-- doppler run -- python step_rag_summary.py -->
 <!-- doppler run -- python step_rag_context.py -->
 
 <!-- doppler run -- python step_rag_embedding.py -->

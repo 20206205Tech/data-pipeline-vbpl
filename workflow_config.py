@@ -61,20 +61,27 @@ STEP_LOAD_DOCUMENT_DETAIL = WorkflowStep(
 STEP_EXTRACT_DOCUMENT_INFO = WorkflowStep(
     id=8,
     code="step_extract_document_info",
-    description="Upload file HTML chi tiết lên Google Drive",
+    description="Bóc tách siêu dữ liệu (số hiệu, cơ quan ban hành, ngày hiệu lực, người ký...) từ HTML.",
     parent_id=7,
 )
 STEP_EXTRACT_DOCUMENT_CONTENT = WorkflowStep(
     id=9,
     code="step_extract_document_content",
-    description="Upload file HTML chi tiết lên Google Drive",
+    description="Trích xuất và làm sạch phần nội dung văn bản chính từ HTML",
     parent_id=8,
 )
 STEP_EXTRACT_DOCUMENT_MARKDOWN = WorkflowStep(
     id=10,
     code="step_extract_document_markdown",
-    description="Upload file HTML chi tiết lên Google Drive",
+    description="Chuyển đổi nội dung HTML sạch sang định dạng Markdown",
     parent_id=9,
+)
+
+STEP_RAG_SUMMARY = WorkflowStep(
+    id=11,
+    code="step_rag_summary",
+    description="Chuyển đổi nội dung HTML sạch sang định dạng Markdown",
+    parent_id=10,
 )
 
 
