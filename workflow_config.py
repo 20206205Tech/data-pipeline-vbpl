@@ -32,6 +32,18 @@ STEP_LOAD_DOCUMENT_TOTAL = WorkflowStep(
     description="step_load_document_total",
     parent_id=2,
 )
+STEP_CRAWL_DOCUMENT_LIST = WorkflowStep(
+    id=4,
+    code="step_crawl_document_list",
+    description="step_crawl_document_list",
+    parent_id=3,
+)
+STEP_LOAD_DOCUMENT_LIST = WorkflowStep(
+    id=5,
+    code="step_load_document_list",
+    description="step_load_document_list",
+    parent_id=4,
+)
 
 
 def generate_workflow_version(steps: list[WorkflowStep]) -> str:

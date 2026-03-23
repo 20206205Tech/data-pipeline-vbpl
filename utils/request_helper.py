@@ -1,6 +1,7 @@
 from urllib.parse import urlencode
 
 import scrapy
+from loguru import logger
 
 import env
 
@@ -25,6 +26,8 @@ def make_vbpl_page_request(spider_instance, page, row_per_page=None):
 
     query_string = urlencode(params)
     url = f"{base_url}?{query_string}"
+
+    logger.debug(f"Đang tạo request cho trang {page}: {url}")
 
     return scrapy.Request(
         url=url,
