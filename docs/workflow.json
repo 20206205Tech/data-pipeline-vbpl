@@ -9,5 +9,8 @@
     "step_extract_document_info": true,
     "step_extract_document_content": true,
     "step_extract_document_markdown": true,
-    "step_rag_summary": true
+    "step_rag_summary": true,
+    "step_rag_chunking": true,
+    "step_rag_context": true,
+    "step_rag_embedding": true
 }

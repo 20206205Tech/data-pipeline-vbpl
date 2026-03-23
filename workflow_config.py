@@ -80,8 +80,26 @@ STEP_EXTRACT_DOCUMENT_MARKDOWN = WorkflowStep(
 STEP_RAG_SUMMARY = WorkflowStep(
     id=11,
     code="step_rag_summary",
-    description="Chuyển đổi nội dung HTML sạch sang định dạng Markdown",
+    description="Tạo tóm tắt nội dung văn bản từ markdown",
     parent_id=10,
+)
+STEP_RAG_CHUNKING = WorkflowStep(
+    id=12,
+    code="step_rag_chunking",
+    description="Cắt nhỏ nội dung Markdown bằng LLM",
+    parent_id=11,
+)
+STEP_RAG_CONTEXT = WorkflowStep(
+    id=13,
+    code="step_rag_context",
+    description="Tạo ngữ cảnh cho từng đoạn văn bản",
+    parent_id=12,
+)
+STEP_RAG_EMBEDDING = WorkflowStep(
+    id=14,
+    code="step_rag_embedding",
+    description="Tạo vector embedding cho từng đoạn văn bản",
+    parent_id=13,
 )
 
 

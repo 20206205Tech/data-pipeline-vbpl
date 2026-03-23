@@ -113,3 +113,24 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           doppler run -p 20206205tech -c prd -- uv run python step_rag_summary.py
+
+      - name: step_rag_chunking
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.step_rag_chunking == true }}
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run -p 20206205tech -c prd -- uv run python step_rag_chunking.py
+
+      - name: step_rag_context
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.step_rag_context == true }}
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run -p 20206205tech -c prd -- uv run python step_rag_context.py
+
+      - name: step_rag_embedding
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.step_rag_embedding == true }}
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run -p 20206205tech -c prd -- uv run python step_rag_embedding.py

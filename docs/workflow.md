@@ -13,6 +13,9 @@ flowchart TD
     N9["[9] step_extract_document_content"]
     N10["[10] step_extract_document_markdown"]
     N11["[11] step_rag_summary"]
+    N12["[12] step_rag_chunking"]
+    N13["[13] step_rag_context"]
+    N14["[14] step_rag_embedding"]
 
     %% Các liên kết
     N1 --> N2
@@ -25,4 +28,7 @@ flowchart TD
     N8 --> N9
     N9 --> N10
     N10 --> N11
+    N11 --> N12
+    N12 --> N13
+    N13 --> N14
 ```
