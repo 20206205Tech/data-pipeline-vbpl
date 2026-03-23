@@ -59,22 +59,22 @@ STEP_LOAD_DOCUMENT_DETAIL = WorkflowStep(
 
 
 STEP_EXTRACT_DOCUMENT_INFO = WorkflowStep(
-    id=7,
+    id=8,
     code="step_extract_document_info",
     description="Upload file HTML chi tiết lên Google Drive",
-    parent_id=6,
+    parent_id=7,
 )
 STEP_EXTRACT_DOCUMENT_CONTENT = WorkflowStep(
-    id=7,
+    id=9,
     code="step_extract_document_content",
     description="Upload file HTML chi tiết lên Google Drive",
-    parent_id=6,
+    parent_id=8,
 )
 STEP_EXTRACT_DOCUMENT_MARKDOWN = WorkflowStep(
-    id=7,
+    id=10,
     code="step_extract_document_markdown",
     description="Upload file HTML chi tiết lên Google Drive",
-    parent_id=6,
+    parent_id=9,
 )
 
 

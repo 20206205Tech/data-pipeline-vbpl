@@ -4,6 +4,7 @@ from typing import Any, List, Optional
 import dlt
 from loguru import logger
 
+import env
 import workflow_config
 
 
