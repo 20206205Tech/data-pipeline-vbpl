@@ -43,34 +43,35 @@ def document_detail_resource(item_ids):
                 )
                 continue
 
-            item_ids.append(item_id)
-
             new_file_hash = calculate_file_hash(html_path)
 
             file_hash, drive_id = get_existing_hash_from_db(
                 conn, "document_detail", item_id, "file_hash", "drive_id"
             )
 
-            # Nếu file có thay đổi
-            if file_hash != new_file_hash:
-                new_drive_id = upload_to_drive(
-                    drive_service, html_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
-                )
+            # 1. KIỂM TRA HASH: Nếu giống nhau -> In thông báo và Bỏ qua
+            if file_hash == new_file_hash:
+                logger.warning(f"File không đổi, bỏ qua item_id: {item_id}")
+                continue
 
-                # Nếu upload thất bại, ngắt hàm ngay lập tức (không yield gì cả)
-                if not new_drive_id:
-                    return
+            # 2. NẾU HASH KHÁC: Tiến hành upload lên Drive
+            new_drive_id = upload_to_drive(
+                drive_service, html_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
+            )
 
-                # Nếu thành công, cập nhật lại biến để chuẩn bị yield
-                drive_id = new_drive_id
-                file_hash = new_file_hash
+            # 3. KIỂM TRA UPLOAD: Nếu thất bại -> In lỗi và Bỏ qua
+            if not new_drive_id:
+                logger.error(f"Upload thất bại, bỏ qua cập nhật item_id: {item_id}")
+                continue
 
-            # Lệnh yield này chỉ chạy khi: File KHÔNG đổi, HOẶC File CÓ đổi và ĐÃ upload thành công
+            # 4. THÀNH CÔNG TOÀN BỘ: Ghi nhận item_id và tiến hành Yield
+            item_ids.append(item_id)
+
             yield {
                 "item_id": item_id,
                 "update_at": datetime.now().isoformat(),
-                "drive_id": drive_id,
-                "file_hash": file_hash,
+                "drive_id": new_drive_id,
+                "file_hash": new_file_hash,
             }
     finally:
         if conn:

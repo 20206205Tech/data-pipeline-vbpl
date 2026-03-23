@@ -5,5 +5,8 @@
     "step_crawl_document_list": true,
     "step_load_document_list": true,
     "step_crawl_document_detail": true,
-    "step_load_document_detail": true
+    "step_load_document_detail": true,
+    "step_extract_document_info": true,
+    "step_extract_document_content": true,
+    "step_extract_document_markdown": true
 }

@@ -58,6 +58,26 @@ STEP_LOAD_DOCUMENT_DETAIL = WorkflowStep(
 )
 
 
+STEP_EXTRACT_DOCUMENT_INFO = WorkflowStep(
+    id=7,
+    code="step_extract_document_info",
+    description="Upload file HTML chi tiết lên Google Drive",
+    parent_id=6,
+)
+STEP_EXTRACT_DOCUMENT_CONTENT = WorkflowStep(
+    id=7,
+    code="step_extract_document_content",
+    description="Upload file HTML chi tiết lên Google Drive",
+    parent_id=6,
+)
+STEP_EXTRACT_DOCUMENT_MARKDOWN = WorkflowStep(
+    id=7,
+    code="step_extract_document_markdown",
+    description="Upload file HTML chi tiết lên Google Drive",
+    parent_id=6,
+)
+
+
 def generate_workflow_version(steps: list[WorkflowStep]) -> str:
     if not steps:
         return "1.0.0"

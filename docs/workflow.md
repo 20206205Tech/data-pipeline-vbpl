@@ -9,6 +9,9 @@ flowchart TD
     N5["[5] step_load_document_list"]
     N6["[6] step_crawl_document_detail"]
     N7["[7] step_load_document_detail"]
+    N7["[7] step_extract_document_info"]
+    N7["[7] step_extract_document_content"]
+    N7["[7] step_extract_document_markdown"]
 
     %% Các liên kết
     N1 --> N2
@@ -16,5 +19,8 @@ flowchart TD
     N3 --> N4
     N4 --> N5
     N5 --> N6
+    N6 --> N7
+    N6 --> N7
+    N6 --> N7
     N6 --> N7
 ```
