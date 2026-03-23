@@ -100,49 +100,49 @@ def log_workflow_state(
         raise
 
 
-# def fetch_and_lock_pending_tasks(conn, step_code: str, limit: int = None) -> list:
-#     if limit is None:
-#         if env.CRAWL_DATA_ENV_DEV:
-#             limit = 5
-#         else:
-#             limit = 100
-#             # limit = None
+def fetch_and_lock_pending_tasks(conn, step_code: str, limit: int = None) -> list:
+    if limit is None:
+        if env.CRAWL_DATA_ENV_DEV:
+            limit = 2
+        else:
+            limit = 100
+            # limit = None
 
-#     logger.info(f"Bắt đầu lấy và khóa task cho step_code='{step_code}', limit={limit}")
+    logger.info(f"Bắt đầu lấy và khóa task cho step_code='{step_code}', limit={limit}")
 
-#     limit_clause = "LIMIT %s" if limit is not None else ""
-#     params = [limit] if limit is not None else []
+    limit_clause = "LIMIT %s" if limit is not None else ""
+    params = [limit] if limit is not None else []
 
-#     query = f"""
-#     WITH step_info AS (
-#         SELECT id, parent_id
-#         FROM "public"."workflows"
-#         WHERE code = '{step_code}'
-#     ),
-#     selected_items AS (
-#         SELECT ds.item_id
-#         FROM "public"."document_state" ds
-#         WHERE ds.workflow_id = (SELECT parent_id FROM step_info)
-#           AND ds.end_time IS NOT NULL
-#         {limit_clause}
-#         FOR UPDATE SKIP LOCKED
-#     )
-#     UPDATE "public"."document_state" ws
-#     SET
-#         workflow_id = (SELECT id FROM step_info),
-#         start_time = NOW(),
-#         end_time = NULL
-#     FROM selected_items si
-#     WHERE ws.item_id = si.item_id
-#     RETURNING ws.item_id;
-#     """
+    query = f"""
+    WITH step_info AS (
+        SELECT id, parent_id
+        FROM "public"."workflows"
+        WHERE code = '{step_code}'
+    ),
+    selected_items AS (
+        SELECT ds.item_id
+        FROM "public"."document_state" ds
+        WHERE ds.workflow_id = (SELECT parent_id FROM step_info)
+          AND ds.end_time IS NOT NULL
+        {limit_clause}
+        FOR UPDATE SKIP LOCKED
+    )
+    UPDATE "public"."document_state" ws
+    SET
+        workflow_id = (SELECT id FROM step_info),
+        start_time = NOW(),
+        end_time = NULL
+    FROM selected_items si
+    WHERE ws.item_id = si.item_id
+    RETURNING ws.item_id;
+    """
 
-#     with conn.cursor() as cur:
-#         cur.execute(query, tuple(params))
+    with conn.cursor() as cur:
+        cur.execute(query, tuple(params))
 
-#         locked_items = [row[0] for row in cur.fetchall()]
+        locked_items = [row[0] for row in cur.fetchall()]
 
-#         logger.info(
-#             f"Đã khóa thành công {len(locked_items)} item(s) cho step_code='{step_code}'."
-#         )
-#         return locked_items
+        logger.info(
+            f"Đã khóa thành công {len(locked_items)} item(s) cho step_code='{step_code}'."
+        )
+        return locked_items

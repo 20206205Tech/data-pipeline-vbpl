@@ -71,3 +71,17 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
           doppler run -p 20206205tech -c prd -- uv run python step_load_document_list.py
+
+      - name: step_crawl_document_detail
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.step_crawl_document_detail == true }}
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run -p 20206205tech -c prd -- uv run python step_crawl_document_detail.py
+
+      - name: step_load_document_detail
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.step_load_document_detail == true }}
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          doppler run -p 20206205tech -c prd -- uv run python step_load_document_detail.py

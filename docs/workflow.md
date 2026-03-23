@@ -7,10 +7,14 @@ flowchart TD
     N3["[3] step_load_document_total"]
     N4["[4] step_crawl_document_list"]
     N5["[5] step_load_document_list"]
+    N6["[6] step_crawl_document_detail"]
+    N7["[7] step_load_document_detail"]
 
     %% Các liên kết
     N1 --> N2
     N2 --> N3
     N3 --> N4
     N4 --> N5
+    N5 --> N6
+    N6 --> N7
 ```

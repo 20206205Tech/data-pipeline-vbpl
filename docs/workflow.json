@@ -3,5 +3,7 @@
     "step_crawl_document_total": true,
     "step_load_document_total": true,
     "step_crawl_document_list": true,
-    "step_load_document_list": true
+    "step_load_document_list": true,
+    "step_crawl_document_detail": true,
+    "step_load_document_detail": true
 }

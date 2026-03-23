@@ -13,8 +13,8 @@ doppler run -- python step_load_document_total.py
 doppler run -- python step_crawl_document_list.py
 doppler run -- python step_load_document_list.py
 
-<!-- doppler run -- python step_crawl_document_detail.py -->
-<!-- doppler run -- python step_load_document_detail.py -->
+doppler run -- python step_crawl_document_detail.py
+doppler run -- python step_load_document_detail.py
 
 <!-- doppler run -- python step_extract_document_info.py -->
 <!-- doppler run -- python step_extract_document_content.py -->

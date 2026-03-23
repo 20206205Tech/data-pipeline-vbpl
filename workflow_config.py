@@ -18,31 +18,43 @@ class WorkflowStep:
 
 
 STEP_SETUP_WORKFLOW = WorkflowStep(
-    id=1, code="step_setup_workflow", description="step_setup_workflow", parent_id=None
+    id=1, code="step_setup_workflow", description="Khởi tạo workflow", parent_id=None
 )
 STEP_CRAWL_DOCUMENT_TOTAL = WorkflowStep(
     id=2,
     code="step_crawl_document_total",
-    description="step_crawl_document_total",
+    description="Cào thông tin tổng số lượng văn bản pháp luật hiện có trên hệ thống web.",
     parent_id=1,
 )
 STEP_LOAD_DOCUMENT_TOTAL = WorkflowStep(
     id=3,
     code="step_load_document_total",
-    description="step_load_document_total",
+    description="Tải và cập nhật tổng số lượng văn bản vừa thu thập vào database",
     parent_id=2,
 )
 STEP_CRAWL_DOCUMENT_LIST = WorkflowStep(
     id=4,
     code="step_crawl_document_list",
-    description="step_crawl_document_list",
+    description="Cào danh sách các văn bản pháp luật dựa trên sự thay đổi của tổng số lượng",
     parent_id=3,
 )
 STEP_LOAD_DOCUMENT_LIST = WorkflowStep(
     id=5,
     code="step_load_document_list",
-    description="step_load_document_list",
+    description="Lưu danh sách ID văn bản mới thu thập vào database để chuẩn bị cho các luồng tải chi tiết",
     parent_id=4,
+)
+STEP_CRAWL_DOCUMENT_DETAIL = WorkflowStep(
+    id=6,
+    code="step_crawl_document_detail",
+    description="Cào toàn bộ mã nguồn HTML nội dung chi tiết của từng ID văn bản",
+    parent_id=5,
+)
+STEP_LOAD_DOCUMENT_DETAIL = WorkflowStep(
+    id=7,
+    code="step_load_document_detail",
+    description="Upload file HTML chi tiết lên Google Drive",
+    parent_id=6,
 )
 
 
@@ -216,6 +228,3 @@ for key, value in list(globals().items()):
 
 
 workflow_version = generate_workflow_version(workflow_data)
-
-logger.info(f"Workflow Data: {workflow_data}")
-logger.success(f"Generated Workflow Version: {workflow_version}")
