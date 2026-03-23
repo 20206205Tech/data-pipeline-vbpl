@@ -1,41 +1,48 @@
-from dataclasses import dataclass
-from typing import Optional
+import os
 
+from environs import Env
 from loguru import logger
 
-
-@dataclass
-class WorkflowStep:
-    id: int
-    code: str
-    description: str
-    parent_id: Optional[int] = None
+env = Env()
+logger.info(f"Loading environment variables...")
 
 
-STEP_MOT = WorkflowStep(id=1, code="MOT", description="MOT")
-
-STEP_HAI = WorkflowStep(id=2, code="HAI", description="HAI", parent_id=1)
-
-
-# STEP_WORKFLOW    = WorkflowStep(1, "step_workflow", "Khởi tạo workflow trong database và sinh sơ đồ luồng Mermaid.")
-# CRAWL_TOTAL      = WorkflowStep(2, "step_crawl_document_total", "Cào thông tin tổng số lượng văn bản pháp luật hiện có trên hệ thống web.", parent_id=1)
-# LOAD_TOTAL       = WorkflowStep(3, "step_load_document_total", "Tải và cập nhật tổng số lượng văn bản vừa thu thập vào cơ sở dữ liệu PostgreSQL.", parent_id=2)
-# CRAWL_LIST       = WorkflowStep(4, "step_crawl_document_list", "Cào danh sách các ID/URL văn bản pháp luật dựa trên sự thay đổi của tổng số lượng.", parent_id=3)
-# LOAD_LIST        = WorkflowStep(5, "step_load_document_list", "Lưu danh sách ID văn bản mới thu thập vào database để chuẩn bị cho các luồng tải chi tiết.", parent_id=4)
-# CRAWL_DETAIL     = WorkflowStep(6, "step_crawl_document_detail", "Cào toàn bộ mã nguồn HTML nội dung chi tiết của từng ID văn bản.", parent_id=5)
-# LOAD_DETAIL      = WorkflowStep(7, "step_load_document_detail", "Upload file HTML chi tiết lên Google Drive và lưu metadata (drive_id, file_hash) vào database.", parent_id=6)
-# EXTRACT_INFO     = WorkflowStep(8, "step_extract_document_info", "Bóc tách siêu dữ liệu (số hiệu, cơ quan ban hành, ngày hiệu lực, người ký...) từ HTML.", parent_id=7)
-# EXTRACT_CONTENT  = WorkflowStep(9, "step_extract_document_content", "Trích xuất và làm sạch phần nội dung văn bản chính từ HTML, sau đó upload bản sạch lên Drive.", parent_id=8)
-# EXTRACT_MARKDOWN = WorkflowStep(10, "step_extract_document_markdown", "Chuyển đổi nội dung HTML sạch sang định dạng Markdown chuẩn và lưu trữ lên Drive.", parent_id=9)
-# RAG_SUMMARY      = WorkflowStep(11, "step_rag_summary", "Tạo tóm tắt nội dung văn bản từ markdown.", parent_id=10)
-# RAG_CHUNKING     = WorkflowStep(12, "step_rag_chunking", "Cắt nhỏ nội dung Markdown bằng LLM.", parent_id=11)
-# RAG_CONTEXT      = WorkflowStep(13, "step_rag_context", "Tạo ngữ cảnh cho từng đoạn văn bản từ markdown.", parent_id=12)
+PATH_FILE_ENV = os.path.abspath(__file__)
+PATH_FOLDER_PROJECT = os.path.dirname(PATH_FILE_ENV)
+PATH_FOLDER_DATA = os.path.join(PATH_FOLDER_PROJECT, "data")
+PATH_FOLDER_DOCS = os.path.join(PATH_FOLDER_PROJECT, "docs")
 
 
-workflow_data = []
+if not os.path.exists(PATH_FOLDER_DATA):
+    os.makedirs(PATH_FOLDER_DATA)
 
+if not os.path.exists(PATH_FOLDER_DOCS):
+    os.makedirs(PATH_FOLDER_DOCS)
+
+
+CRAWL_DATA_ENV_DEV = env.bool("CRAWL_DATA_ENV_DEV", default=False)
+CRAWL_DATA_OPEN_IN_BROWSER = env.bool("CRAWL_DATA_OPEN_IN_BROWSER", default=False)
+
+
+VECTOR_DATABASE_URL = env.str("VECTOR_DATABASE_URL")
+
+
+DATA_PIPELINE_VBPL_DATABASE_URL = env.str("DATA_PIPELINE_VBPL_DATABASE_URL")
+DATA_PIPELINE_VBPL_DATABASE_URL = (
+    "postgresql://postgres:postgres@localhost:5432/postgres"
+)
+DESTINATION__POSTGRES__CREDENTIALS = DATA_PIPELINE_VBPL_DATABASE_URL.replace(
+    "-pooler", ""
+)
+os.environ["DESTINATION__POSTGRES__CREDENTIALS"] = DESTINATION__POSTGRES__CREDENTIALS
+
+
+GOOGLE_DRIVE_TOKEN = env.str("GOOGLE_DRIVE_TOKEN")
+GOOGLE_DRIVE_FOLDER_ID = env.str("GOOGLE_DRIVE_FOLDER_ID")
+
+
+print("*" * 100)
 for key, value in list(globals().items()):
-    if key.isupper() and isinstance(value, WorkflowStep):
-        workflow_data.append(value)
-        # logger.info(f"{key}: value={value}")
-logger.info(f"{workflow_data}")
+    if key.isupper():
+        logger.info(f"{key}: ***")
+print("*" * 100)
