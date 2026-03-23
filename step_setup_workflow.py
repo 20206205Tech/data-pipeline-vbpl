@@ -18,6 +18,10 @@ def workflow_resource():
 
 
 def main():
+    workflow_config.workflow_to_mermaid(workflow_config.workflow_data)
+    workflow_config.workflow_to_json(workflow_config.workflow_data)
+    workflow_config.workflow_to_github_action(workflow_config.workflow_data)
+
     pipeline = dlt.pipeline(
         destination="postgres",
         dataset_name="public",
