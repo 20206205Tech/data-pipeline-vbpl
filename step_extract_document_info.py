@@ -146,7 +146,7 @@ def extract_metadata_from_html(item_id, html_content):
     primary_key="item_id",
     columns={"update_at": {"dedup_sort": "desc"}},
 )
-def document_info_resource(item_ids: list, error_item_ids: list):
+def document_info_resource(success_item_ids: list, error_item_ids: list):
     try:
         drive_service = get_drive_service()
         conn = psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
@@ -174,6 +174,7 @@ def document_info_resource(item_ids: list, error_item_ids: list):
                     continue
 
                 logger.info(f"Đang xử lý trích xuất info cho: {item_id}")
+
                 html_bytes = download_from_drive(drive_service, drive_id)
                 html_content = html_bytes.decode("utf-8")
 
@@ -191,7 +192,7 @@ def document_info_resource(item_ids: list, error_item_ids: list):
 
                 if metadata:
                     metadata["update_at"] = datetime.now().isoformat()
-                    item_ids.append(item_id)
+                    success_item_ids.append(item_id)
                     yield metadata
                 else:
                     logger.warning(f"Không trích xuất được metadata cho {item_id}")
