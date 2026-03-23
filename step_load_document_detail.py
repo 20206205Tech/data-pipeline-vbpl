@@ -22,52 +22,56 @@ config_by_path = ConfigByPath(__file__)
     primary_key="item_id",
     columns={"update_at": {"dedup_sort": "desc"}},
 )
-def document_detail_resource(file_path, item_ids):
+def document_detail_resource(item_ids):
     try:
         drive_service = get_drive_service()
 
         conn = psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
-    except Exception as e:
-        logger.error(f"Lỗi khởi tạo kết nối Database/Drive: {e}")
-        return
 
-    try:
-        # Sử dụng hàm chung để lặp qua các record trong JSONL
         for record in yield_jsonl_records(PATH_FILE_OUTPUT):
             item_id = record.get("item_id")
+
             if not item_id:
+                logger.warning(f"Không tìm thấy item_id trong record: {record}")
                 continue
 
             html_path = os.path.join(PATH_FOLDER_OUTPUT, f"{item_id}.html")
 
             if not os.path.exists(html_path):
+                logger.warning(
+                    f"File HTML không tồn tại item_id {item_id}: {html_path}"
+                )
                 continue
 
             item_ids.append(item_id)
 
-            file_hash = calculate_file_hash(html_path)
-            old_hash, old_drive_id = get_existing_hash_from_db(
-                conn, "document_detail", item_id
+            new_file_hash = calculate_file_hash(html_path)
+
+            file_hash, drive_id = get_existing_hash_from_db(
+                conn, "document_detail", item_id, "file_hash", "drive_id"
             )
 
-            if old_hash == file_hash:
-                yield {
-                    "item_id": item_id,
-                    "update_at": datetime.now().isoformat(),
-                    "drive_id": old_drive_id,
-                    "file_hash": file_hash,
-                }
-            else:
-                drive_id = upload_to_drive(
+            # Nếu file có thay đổi
+            if file_hash != new_file_hash:
+                new_drive_id = upload_to_drive(
                     drive_service, html_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
                 )
-                if drive_id:
-                    yield {
-                        "item_id": item_id,
-                        "update_at": datetime.now().isoformat(),
-                        "drive_id": drive_id,
-                        "file_hash": file_hash,
-                    }
+
+                # Nếu upload thất bại, ngắt hàm ngay lập tức (không yield gì cả)
+                if not new_drive_id:
+                    return
+
+                # Nếu thành công, cập nhật lại biến để chuẩn bị yield
+                drive_id = new_drive_id
+                file_hash = new_file_hash
+
+            # Lệnh yield này chỉ chạy khi: File KHÔNG đổi, HOẶC File CÓ đổi và ĐÃ upload thành công
+            yield {
+                "item_id": item_id,
+                "update_at": datetime.now().isoformat(),
+                "drive_id": drive_id,
+                "file_hash": file_hash,
+            }
     finally:
         if conn:
             conn.close()
@@ -82,7 +86,7 @@ def main():
 
     item_ids = []
 
-    info = pipeline.run(document_detail_resource(PATH_FILE_OUTPUT, item_ids))
+    info = pipeline.run(document_detail_resource(item_ids))
     logger.info(f"Kết quả pipeline: {info}")
 
     if item_ids:

@@ -20,7 +20,6 @@ def get_drive_service():
     creds_info = json.loads(env.GOOGLE_DRIVE_TOKEN)
     creds = Credentials.from_authorized_user_info(creds_info, SCOPES)
 
-    # Tự động làm mới token nếu đã hết hạn
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
@@ -71,7 +70,6 @@ def upload_to_drive(service, file_path, folder_id):
         file_name = os.path.basename(file_path)
         file_metadata = {"name": file_name, "parents": [folder_id]}
 
-        # Tự động đoán loại file (mimetype)
         mime_type, _ = mimetypes.guess_type(file_path)
         if mime_type is None:
             mime_type = "application/octet-stream"

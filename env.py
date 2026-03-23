@@ -23,14 +23,18 @@ if not os.path.exists(PATH_FOLDER_DOCS):
 CRAWL_DATA_ENV_DEV = env.bool("CRAWL_DATA_ENV_DEV", default=False)
 CRAWL_DATA_OPEN_IN_BROWSER = env.bool("CRAWL_DATA_OPEN_IN_BROWSER", default=False)
 
+if CRAWL_DATA_ENV_DEV:
+    CRAWL_DATA_OPEN_IN_BROWSER = False
+
 
 VECTOR_DATABASE_URL = env.str("VECTOR_DATABASE_URL")
 
 
 DATA_PIPELINE_VBPL_DATABASE_URL = env.str("DATA_PIPELINE_VBPL_DATABASE_URL")
-DATA_PIPELINE_VBPL_DATABASE_URL = (
-    "postgresql://postgres:postgres@localhost:5432/postgres"
-)
+if CRAWL_DATA_ENV_DEV:
+    DATA_PIPELINE_VBPL_DATABASE_URL = (
+        "postgresql://postgres:postgres@localhost:5432/postgres"
+    )
 DESTINATION__POSTGRES__CREDENTIALS = DATA_PIPELINE_VBPL_DATABASE_URL.replace(
     "-pooler", ""
 )
