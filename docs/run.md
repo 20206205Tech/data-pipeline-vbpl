@@ -3,12 +3,13 @@ docker compose -f docker-compose.yml down
 docker compose -f docker-compose.yml up -d
 cd ~/Desktop/20206205/data-pipeline-vbpl
 doppler setup --project 20206205tech --config dev
-doppler run -- python step_workflow.py
+doppler run -- python step_setup_workflow.py
 
 <!--  -->
 
-<!-- doppler run -- python step_crawl_document_total.py -->
-<!-- doppler run -- python step_load_document_total.py -->
+doppler run -- python step_crawl_document_total.py
+doppler run -- python step_load_document_total.py
+
 <!-- doppler run -- python step_crawl_document_list.py -->
 <!-- doppler run -- python step_load_document_list.py -->
 <!-- doppler run -- python step_crawl_document_detail.py -->

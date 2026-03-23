@@ -1,4 +1,5 @@
 {
     "step_setup_workflow": true,
-    "HAI": true
+    "step_crawl_document_total": true,
+    "step_load_document_total": true
 }

@@ -18,9 +18,20 @@ class WorkflowStep:
 
 
 STEP_SETUP_WORKFLOW = WorkflowStep(
-    id=1, code="step_setup_workflow", description="step_setup_workflow"
+    id=1, code="step_setup_workflow", description="step_setup_workflow", parent_id=None
 )
-STEP_HAI = WorkflowStep(id=2, code="HAI", description="HAI", parent_id=1)
+STEP_CRAWL_DOCUMENT_TOTAL = WorkflowStep(
+    id=2,
+    code="step_crawl_document_total",
+    description="step_crawl_document_total",
+    parent_id=1,
+)
+STEP_LOAD_DOCUMENT_TOTAL = WorkflowStep(
+    id=3,
+    code="step_load_document_total",
+    description="step_load_document_total",
+    parent_id=2,
+)
 
 
 def generate_workflow_version(steps: list[WorkflowStep]) -> str:
