@@ -10,6 +10,7 @@ dependencies = [
     "grandalf>=0.8",
     "loguru>=0.7.3",
     "psycopg2-binary>=2.9.11",
+    "scrapy>=2.14.2",
 ]
 
 [dependency-groups]
