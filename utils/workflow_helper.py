@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, List, Optional, Tuple
 
 import dlt
+import plotext as plt
 from loguru import logger
 
 import env
@@ -164,14 +165,42 @@ def get_workflow_item_counts_via_pipeline(
 
     try:
         with pipeline.sql_client() as client:
-            rows = client.execute_sql(query)
+            results = client.execute_sql(query)
+
+            if not results:
+                print("Không có dữ liệu để hiển thị biểu đồ.")
+                return
 
             logger.success(f"Đã lấy thành công thống kê cho workflow")
 
-            for workflow_id, count in rows:
+            # 4. Xử lý dữ liệu
+            # Tách dữ liệu thành 2 danh sách: Trục X (workflow_ids) và Trục Y (counts)
+            # Ép kiểu workflow_id sang chuỗi (string) để plotext hiển thị đúng dạng nhãn (label)
+            workflow_ids = [str(row[0]) for row in results]
+            counts = [row[1] for row in results]
+
+            # 5. Cấu hình và vẽ biểu đồ trên terminal
+            plt.clear_figure()  # Xóa bộ đệm biểu đồ cũ (nếu có)
+            plt.bar(workflow_ids, counts)
+
+            # Thêm tiêu đề và nhãn trục
+            plt.title("Thống Kê Số Lượng Document State Theo Workflow ID")
+            plt.xlabel("Workflow ID")
+            plt.ylabel("Số Lượng (Count)")
+
+            # Tuỳ chỉnh kích thước biểu đồ (chiều rộng cột text, chiều cao dòng text)
+            plt.plotsize(80, 25)
+
+            # Áp dụng giao diện (theme). Có thể thử: 'clear', 'dark', 'pro', ...
+            plt.theme("clear")
+
+            # 6. Hiển thị biểu đồ ra màn hình console
+            plt.show()
+
+            for workflow_id, count in results:
                 logger.debug(f"Workflow ID: {workflow_id}, Item Count: {count}")
 
-            return rows
+            return results
 
     except Exception as e:
         logger.error(f"Lỗi database khi lấy thống kê workflow: {e}")
