@@ -162,26 +162,30 @@ def workflow_to_mermaid(data):
 
 
 def workflow_to_json(data):
-    # 1. Chuyển đổi dữ liệu (tương tự như hàm workflow_to_mermaid)
+    # 1. Chuyển đổi dữ liệu
     dict_data = [asdict(item) if is_dataclass(item) else item for item in data]
 
-    # 2. Xây dựng dictionary cho JSON
-    workflow_dict = {}
+    # 2. Xây dựng dictionary steps_config (chứa các bước workflow)
+    steps_config = {}
     for item in dict_data:
         code = item.get("code")
         if code:
-            # Gán giá trị True cho code (ví dụ: "step_setup_workflow": true)
-            # Nếu object có trường is_active, bạn có thể thay thế bằng: item.get("is_active", True)
-            workflow_dict[code] = True
+            steps_config[code] = True
 
-    # 3. Xác định đường dẫn file đầu ra
+    # 3. Gói steps_config vào trong client_payload và thêm event_type
+    final_payload = {
+        "event_type": "data_pipeline_trigger",
+        "client_payload": {"steps_config": steps_config},
+    }
+
+    # 4. Xác định đường dẫn file đầu ra
     output_file = os.path.join(env.PATH_FOLDER_DOCS, "workflow.json")
 
-    # 4. Ghi nội dung ra file JSON
+    # 5. Ghi nội dung ra file JSON
     try:
         # Sử dụng indent=4 để format file JSON đẹp và dễ nhìn hơn
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(workflow_dict, f, ensure_ascii=False, indent=4)
+            json.dump(final_payload, f, ensure_ascii=False, indent=4)
 
         logger.info(f"Đã ghi thành công dữ liệu JSON vào file {output_file}")
     except Exception as e:
@@ -189,7 +193,7 @@ def workflow_to_json(data):
 
 
 def workflow_to_github_action(data):
-    # 1. Chuyển đổi dữ liệu (tương tự các hàm trước)
+    # 1. Chuyển đổi dữ liệu
     dict_data = [asdict(item) if is_dataclass(item) else item for item in data]
 
     # 2. Phần đầu cố định của GitHub Action
@@ -237,10 +241,9 @@ jobs:
     for item in dict_data:
         code = item.get("code")
         if code:
-            # Lưu ý: Sử dụng {{ và }} trong f-string để in ra { và } trong YAML
             step_block = f"""
       - name: {code}
-        if: ${{{{ github.event_name == 'workflow_dispatch' || github.event.client_payload.{code} == true }}}}
+        if: ${{{{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.{code} == true }}}}
         env:
           DOPPLER_TOKEN: ${{{{ secrets.DOPPLER_TOKEN }}}}
         run: |
@@ -270,6 +273,5 @@ workflow_data = []
 for key, value in list(globals().items()):
     if key.isupper() and isinstance(value, WorkflowStep) and key.startswith("STEP_"):
         workflow_data.append(value)
-
 
 workflow_version = generate_workflow_version(workflow_data)
