@@ -158,7 +158,7 @@ def get_workflow_item_counts_via_pipeline(
         SELECT workflow_id, COUNT(*)
         FROM "public"."document_state"
         GROUP BY workflow_id
-        ORDER BY COUNT(*) DESC;
+        ORDER BY workflow_id ASC;
     """
 
     # logger.info(f"Bắt đầu lấy thống kê từ pipeline: {pipeline.pipeline_name}")
