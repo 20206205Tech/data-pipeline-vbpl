@@ -181,7 +181,7 @@ def main():
         logger.info(f"Đã xử lý thành công {len(success_item_ids)} items.")
 
     if error_item_ids:
-        logger.warning(f"Có {len(error_item_ids)} items gặp lỗi và cần thu thập lại.")
+        logger.error(f"Có {len(error_item_ids)} items gặp lỗi và cần thu thập lại.")
         logger.warning(f"Danh sách lỗi: {error_item_ids}")
 
         pipeline.run(

@@ -177,7 +177,8 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                 yield {
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
-                    "context_md5": current_context_md5,  # Lưu lại hash của file nguồn để làm trạm gác lần sau
+                    # Lưu lại hash của file nguồn để làm trạm gác lần sau
+                    "context_md5": current_context_md5,
                     "vector_count": len(documents),
                     "status": "embedded",
                 }
@@ -222,7 +223,7 @@ def main():
         logger.info(f"Đã xử lý thành công {len(success_item_ids)} items.")
 
     if error_item_ids:
-        logger.warning(
+        logger.error(
             f"Có {len(error_item_ids)} items gặp lỗi và cần thu thập/chạy lại."
         )
         logger.warning(f"Danh sách lỗi: {error_item_ids}")
