@@ -9,16 +9,12 @@ from markdownify import markdownify
 import env
 import workflow_config
 from utils.config_by_path import ConfigByPath
-
-# Mở comment và import đủ các hàm Drive, nhớ thêm get_drive_file_md5
 from utils.google_drive import (
     download_from_drive,
     get_drive_file_md5,
     get_drive_service,
     upload_to_drive,
 )
-
-# Đổi sang sử dụng hàm lấy drive_id và tính MD5
 from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
 from utils.workflow_helper import (
     document_state_resource,

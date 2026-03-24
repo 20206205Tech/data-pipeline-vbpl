@@ -101,6 +101,12 @@ STEP_RAG_EMBEDDING = WorkflowStep(
     description="Tạo vector embedding cho từng đoạn văn bản",
     parent_id=13,
 )
+STEP_CLEAN_DOCUMENT_PENDING = WorkflowStep(
+    id=15,
+    code="step_clean_document_pending",
+    description="Tạo vector embedding cho từng đoạn văn bản",
+    parent_id=14,
+)
 
 
 def generate_workflow_version(steps: list[WorkflowStep]) -> str:

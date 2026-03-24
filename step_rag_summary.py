@@ -17,8 +17,6 @@ from utils.google_drive import (
     get_drive_service,
     upload_to_drive,
 )
-
-# Cần import lại get_existing_hash_from_db để lấy cả md_hash cũ
 from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
 from utils.workflow_helper import (
     document_state_resource,

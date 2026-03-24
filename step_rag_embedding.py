@@ -13,15 +13,11 @@ from loguru import logger
 import env
 import workflow_config
 from utils.config_by_path import ConfigByPath
-
-# Cập nhật import Google Drive
 from utils.google_drive import (
     download_from_drive,
     get_drive_file_md5,
     get_drive_service,
 )
-
-# Cập nhật import Hash Helper
 from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
 from utils.workflow_helper import (
     document_state_resource,
