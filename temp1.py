@@ -10,12 +10,13 @@ from loguru import logger
 
 import env
 import workflow_config
+from step_load_document_detail import config_by_path
 from utils.google_drive import get_drive_file_md5, get_drive_service
 
 # Ép thời gian chờ tối đa cho mọi request mạng là 60 giây
 socket.setdefaulttimeout(60)
 
-LIST_FOLDER_ID = env.LIST_FOLDER_ID
+LIST_FOLDER_ID = [config_by_path.GOOGLE_DRIVE_FOLDER_ID]
 
 
 def get_existing_data(conn):
@@ -64,10 +65,6 @@ def state_resource(sync_data):
 
 
 def main():
-    if not LIST_FOLDER_ID:
-        logger.error("Danh sách LIST_FOLDER_ID trống. Vui lòng kiểm tra lại cấu hình.")
-        return
-
     drive_service = get_drive_service()
     conn = psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
 
