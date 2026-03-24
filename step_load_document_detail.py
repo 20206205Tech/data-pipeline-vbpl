@@ -32,6 +32,11 @@ def document_detail_resource(success_item_ids, error_item_ids):
         drive_service = get_drive_service()
         conn = psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
 
+        with open(PATH_FILE_OUTPUT, "r", encoding="utf-8") as f:
+            total_lines = sum(1 for _ in f)
+
+        logger.info(f"Tổng số dòng cần xử lý: {total_lines}")
+
         for record in yield_jsonl_records(PATH_FILE_OUTPUT):
             item_id = record.get("item_id")
 
