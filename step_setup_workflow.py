@@ -5,7 +5,6 @@ from loguru import logger
 
 import workflow_config
 from utils.config_by_path import ConfigByPath
-from utils.workflow_helper import get_workflow_item_counts_via_pipeline
 
 config_by_path = ConfigByPath(__file__)
 
@@ -31,8 +30,6 @@ def main():
 
     info = pipeline.run(workflow_resource())
     logger.info(f"Kết quả pipeline: {info}")
-
-    get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":

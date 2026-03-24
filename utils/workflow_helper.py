@@ -160,13 +160,13 @@ def get_workflow_item_counts_via_pipeline(
         ORDER BY COUNT(*) DESC;
     """
 
-    logger.info(f"Bắt đầu lấy thống kê từ pipeline: {pipeline.pipeline_name}")
+    # logger.info(f"Bắt đầu lấy thống kê từ pipeline: {pipeline.pipeline_name}")
 
     try:
         with pipeline.sql_client() as client:
             rows = client.execute_sql(query)
 
-            logger.success(f"Đã lấy thành công thống kê cho {len(rows)} workflow(s).")
+            logger.success(f"Đã lấy thành công thống kê cho workflow")
 
             for workflow_id, count in rows:
                 logger.debug(f"Workflow ID: {workflow_id}, Item Count: {count}")

@@ -6,10 +6,7 @@ from loguru import logger
 from output_document_list import PATH_FILE_OUTPUT
 from utils.config_by_path import ConfigByPath
 from utils.jsonl_helper import yield_jsonl_records
-from utils.workflow_helper import (
-    get_workflow_item_counts_via_pipeline,
-    log_workflow_state,
-)
+from utils.workflow_helper import log_workflow_state
 
 config_by_path = ConfigByPath(__file__)
 
@@ -33,8 +30,6 @@ def main():
         log_workflow_state(
             pipeline=pipeline, item_ids=item_ids, start_time=now, end_time=now
         )
-
-    get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@ import env
 
 llm = ChatOllama(
     base_url=env.OLLAMA_URL,
-    model="qwen2.5:7b",
+    # model="qwen2.5:7b",
+    model="gemma2:9b",
     temperature=0.3,
     num_ctx=32768,
 )
