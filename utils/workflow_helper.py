@@ -106,7 +106,8 @@ def fetch_and_lock_pending_tasks(conn, step_code: str, limit: int = None) -> lis
         if env.CRAWL_DATA_ENV_DEV:
             limit = 2
         else:
-            limit = 100
+            limit = 10
+            # limit = 100
             # limit = None
 
     logger.info(f"Bắt đầu lấy và khóa task cho step_code='{step_code}', limit={limit}")
