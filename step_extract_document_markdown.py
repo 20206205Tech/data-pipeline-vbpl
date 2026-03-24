@@ -52,7 +52,7 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=1000,
+            limit=100,
         )
 
         if not pending_item_ids:
