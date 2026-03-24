@@ -49,6 +49,8 @@ OLLAMA_URL = "https://ollama.20206205.tech"
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_URL = "https://colab.20206205.tech"
 
+WEBHOOK_OLLAMA_URL = "https://webhook.20206205.tech/send-data"
+
 
 print("*" * 100)
 for key, value in list(globals().items()):

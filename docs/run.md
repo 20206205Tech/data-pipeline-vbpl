@@ -34,6 +34,7 @@ doppler run -- python step_rag_summary.py
 doppler run -- python step_rag_chunking.py
 doppler run -- python step_rag_context.py
 
+doppler run -- python step_call_colab.py
 doppler run -- python step_rag_embedding.py
 
 doppler run -- python step_clean_document_pending.py

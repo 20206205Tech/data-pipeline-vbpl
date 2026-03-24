@@ -15,8 +15,9 @@ flowchart TD
     N11["[11] step_rag_summary"]
     N12["[12] step_rag_chunking"]
     N13["[13] step_rag_context"]
-    N14["[14] step_rag_embedding"]
-    N15["[15] step_clean_document_pending"]
+    N14["[14] step_call_colab"]
+    N15["[15] step_rag_embedding"]
+    N16["[16] step_clean_document_pending"]
 
     %% Các liên kết
     N1 --> N2
@@ -33,4 +34,5 @@ flowchart TD
     N12 --> N13
     N13 --> N14
     N14 --> N15
+    N15 --> N16
 ```

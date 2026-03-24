@@ -95,17 +95,23 @@ STEP_RAG_CONTEXT = WorkflowStep(
     description="Tạo ngữ cảnh cho từng đoạn văn bản",
     parent_id=12,
 )
-STEP_RAG_EMBEDDING = WorkflowStep(
+STEP_CALL_COLAB = WorkflowStep(
     id=14,
-    code="step_rag_embedding",
+    code="step_call_colab",
     description="Tạo vector embedding cho từng đoạn văn bản",
     parent_id=13,
 )
-STEP_CLEAN_DOCUMENT_PENDING = WorkflowStep(
+STEP_RAG_EMBEDDING = WorkflowStep(
     id=15,
-    code="step_clean_document_pending",
+    code="step_rag_embedding",
     description="Tạo vector embedding cho từng đoạn văn bản",
     parent_id=14,
+)
+STEP_CLEAN_DOCUMENT_PENDING = WorkflowStep(
+    id=16,
+    code="step_clean_document_pending",
+    description="Tạo vector embedding cho từng đoạn văn bản",
+    parent_id=15,
 )
 
 

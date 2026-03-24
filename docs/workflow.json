@@ -15,6 +15,7 @@
             "step_rag_summary": true,
             "step_rag_chunking": true,
             "step_rag_context": true,
+            "step_call_colab": true,
             "step_rag_embedding": true,
             "step_clean_document_pending": true
         }
