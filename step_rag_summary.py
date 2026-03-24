@@ -11,8 +11,15 @@ import workflow_config
 from rag import custom_prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_string_hash, get_existing_hash_from_db
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+    upload_to_drive,
+)
+
+# Cần import lại get_existing_hash_from_db để lấy cả md_hash cũ
+from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -29,7 +36,6 @@ def summarize_with_ollama(text_content, max_retries=3):
             content=custom_prompt.SUMMARY_SYSTEM_PROMPT.format(document=text_content)
         )
     ]
-
     return call_ollama(messages, max_retries=max_retries, stream=True)
 
 
@@ -56,47 +62,54 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
 
         for item_id in pending_item_ids:
             try:
-                # 1. Lấy Hash và Drive ID của file Markdown nguồn từ DB
-                md_file_hash, md_drive_id = get_existing_hash_from_db(
-                    conn, "document_markdown", item_id, "file_hash", "drive_id"
+                # 1. Lấy Drive ID của file Markdown từ bảng document_markdown
+                md_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_markdown", item_id, "drive_id"
                 )
 
                 if not md_drive_id:
                     logger.warning(
                         f"⚠️ Bỏ qua {item_id}: Không tìm thấy dữ liệu Markdown."
                     )
-                    error_item_ids.append(item_id)  # Ghi nhận lỗi
+                    error_item_ids.append(item_id)
                     continue
 
-                # 2. Lấy Hash Markdown lịch sử từ bảng document_summary
+                # 2. Gọi API hỏi Google Drive mã MD5 hiện tại của file Markdown này
+                current_md_md5 = get_drive_file_md5(drive_service, md_drive_id)
+
+                if not current_md_md5:
+                    logger.warning(
+                        f"⚠️ Không lấy được MD5 từ Drive cho Markdown của {item_id}"
+                    )
+                    error_item_ids.append(item_id)
+                    continue
+
+                # 3. Lấy Hash Markdown lịch sử từ bảng document_summary
                 old_md_hash, _ = get_existing_hash_from_db(
                     conn, "document_summary", item_id, "md_hash", "drive_id"
                 )
 
-                # 3. THÀNH CÔNG 1: Skip hoàn toàn nếu Markdown không có sự thay đổi
-                if old_md_hash == md_file_hash:
+                # 4. TRẠM GÁC: Skip hoàn toàn nếu Markdown không thay đổi
+                if old_md_hash == current_md_md5:
                     logger.info(
-                        f"⏭️ Bỏ qua {item_id}: Nội dung Markdown không thay đổi."
+                        f"⏭️ Bỏ qua {item_id}: Nội dung Markdown không thay đổi, không cần gọi LLM."
                     )
                     success_item_ids.append(item_id)
-                    continue  # NGẮT LUỒNG VÀ KHÔNG YIELD
+                    continue
 
-                # 4. TIẾN HÀNH: Tóm tắt và tính Hash cho bản tóm tắt mới
+                # 5. TIẾN HÀNH: Tải file Markdown và gọi Ollama
                 logger.info(f"📝 Đang tải và tóm tắt tài liệu: {item_id}")
                 md_bytes = download_from_drive(drive_service, md_drive_id)
                 md_text = md_bytes.decode("utf-8")
 
                 summary_text = summarize_with_ollama(md_text)
 
-                # Kiểm tra rủi ro mô hình AI trả về lỗi/rỗng
                 if not summary_text:
                     logger.error(f"❌ LLM không trả về kết quả tóm tắt cho {item_id}")
                     error_item_ids.append(item_id)
                     continue
 
-                # Tạo txt_hash từ text tóm tắt
-                txt_file_hash = calculate_string_hash(summary_text)
-
+                # 6. Ghi text tóm tắt ra file local và Upload
                 file_name = f"{item_id}.txt"
                 file_path = os.path.join(PATH_FOLDER_OUTPUT, file_name)
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -111,7 +124,7 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG 2: Yield dữ liệu mới
+                # 7. THÀNH CÔNG: Yield dữ liệu (lưu lại current_md_md5 để dành cho lần sau)
                 logger.success(f"✅ Đã cập nhật tóm tắt mới cho {item_id}")
                 success_item_ids.append(item_id)
 
@@ -119,13 +132,12 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
                     "drive_id": new_drive_id,
-                    "md_hash": md_file_hash,  # Cột 1: Hash Input (để lần sau đối chiếu)
-                    "txt_hash": txt_file_hash,  # Cột 2: Hash Output
+                    "md_hash": current_md_md5,  # QUAN TRỌNG: Lưu lại hash của file đầu vào
                 }
 
             except Exception as e:
                 logger.error(f"💥 Lỗi tại item {item_id}: {e}")
-                error_item_ids.append(item_id)  # Bắt mọi Exception vào mảng lỗi
+                error_item_ids.append(item_id)
 
     except Exception as e:
         logger.error(f"Lỗi khởi tạo resource hoặc kết nối DB: {e}")

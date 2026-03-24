@@ -9,8 +9,8 @@ import env
 import workflow_config
 from output_document_detail import PATH_FILE_OUTPUT, PATH_FOLDER_OUTPUT
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_file_hash, get_existing_hash_from_db
+from utils.google_drive import get_drive_file_md5, get_drive_service, upload_to_drive
+from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
 from utils.jsonl_helper import yield_jsonl_records
 from utils.workflow_helper import document_state_resource, log_workflow_state
 
@@ -44,17 +44,27 @@ def document_detail_resource(success_item_ids, error_item_ids):
                 error_item_ids.append(item_id)
                 continue
 
-            new_file_hash = calculate_file_hash(html_path)
-
-            file_hash, drive_id = get_existing_hash_from_db(
-                conn, "document_detail", item_id, "file_hash", "drive_id"
-            )
-
-            if file_hash == new_file_hash:
-                logger.info(f"File không đổi, bỏ qua item_id: {item_id}")
-                success_item_ids.append(item_id)
+            # 1. Tính MD5 của file dưới máy
+            local_md5 = calculate_file_md5(html_path)
+            if not local_md5:
+                error_item_ids.append(item_id)
                 continue
 
+            # 2. Lấy drive_id cũ từ DB
+            drive_id = get_existing_drive_id_from_db(
+                conn, "document_detail", item_id, "drive_id"
+            )
+
+            # 3. Nếu DB đã có drive_id, gọi API Drive để lấy MD5 về so sánh
+            if drive_id:
+                drive_md5 = get_drive_file_md5(drive_service, drive_id)
+
+                if drive_md5 == local_md5:
+                    logger.info(f"File không đổi trên Drive, bỏ qua item_id: {item_id}")
+                    success_item_ids.append(item_id)
+                    continue
+
+            # 4. Nếu chưa có drive_id HOẶC hash khác nhau -> Upload lại
             new_drive_id = upload_to_drive(
                 drive_service, html_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
             )
@@ -66,11 +76,11 @@ def document_detail_resource(success_item_ids, error_item_ids):
 
             success_item_ids.append(item_id)
 
+            # 5. Trả về DLT: Xoá trường file_hash, chỉ lưu drive_id
             yield {
                 "item_id": item_id,
                 "update_at": datetime.now().isoformat(),
                 "drive_id": new_drive_id,
-                "file_hash": new_file_hash,
             }
     finally:
         if conn:

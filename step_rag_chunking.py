@@ -13,8 +13,17 @@ import workflow_config
 from rag import custom_prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_file_hash, get_existing_hash_from_db
+
+# Cập nhật import Google Drive
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+    upload_to_drive,
+)
+
+# Cập nhật import Hash Helper
+from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -116,39 +125,52 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
             return
 
         for item_id in pending_item_ids:
+            item_folder = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_{item_id}")
+            zip_base_path = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_zip_{item_id}")
+            zip_file_path = f"{zip_base_path}.zip"
+
             try:
-                # 1. Lấy thông tin file Markdown nguồn
-                md_file_hash, md_drive_id = get_existing_hash_from_db(
-                    conn, "document_markdown", item_id, "file_hash", "drive_id"
+                # 1. Lấy drive_id của file Markdown từ DB
+                md_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_markdown", item_id, "drive_id"
                 )
 
-                # 2. Lấy thông tin bản tóm tắt (Summary) từ database
-                _, summary_drive_id = get_existing_hash_from_db(
-                    conn, "document_summary", item_id, "txt_hash", "drive_id"
+                # 2. Lấy drive_id của file Summary từ DB
+                summary_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_summary", item_id, "drive_id"
                 )
 
-                # Kiểm tra nếu thiếu 1 trong 2 file gốc
                 if not md_drive_id or not summary_drive_id:
                     logger.warning(
-                        f"⚠️ Bỏ qua {item_id}: Thiếu dữ liệu Markdown hoặc Summary."
+                        f"⚠️ Bỏ qua {item_id}: Thiếu dữ liệu Markdown hoặc Summary (không có drive_id)."
                     )
                     error_item_ids.append(item_id)
                     continue
 
-                # 3. Truy vấn lịch sử xử lý Chunking
+                # 3. Hỏi API Google Drive mã MD5 hiện tại của file Markdown
+                current_md_md5 = get_drive_file_md5(drive_service, md_drive_id)
+
+                if not current_md_md5:
+                    logger.warning(
+                        f"⚠️ Không lấy được MD5 từ Drive cho Markdown của {item_id}"
+                    )
+                    error_item_ids.append(item_id)
+                    continue
+
+                # 4. Truy vấn lịch sử xử lý Chunking (lấy md_hash cũ)
                 old_md_hash, _ = get_existing_hash_from_db(
                     conn, "document_chunking", item_id, "md_hash", "drive_id"
                 )
 
-                # 4. Bỏ qua nếu Markdown không thay đổi
-                if old_md_hash == md_file_hash:
+                # 5. TRẠM GÁC: Bỏ qua nếu Markdown không thay đổi
+                if old_md_hash == current_md_md5:
                     logger.info(
-                        f"⏭️ Bỏ qua {item_id}: Nội dung Markdown không thay đổi."
+                        f"⏭️ Bỏ qua {item_id}: Nội dung Markdown không thay đổi, không cần gọi LLM Chunking."
                     )
                     success_item_ids.append(item_id)
                     continue
 
-                # 5. Tải file Markdown và Summary từ Google Drive
+                # 6. TIẾN HÀNH: Tải file Markdown và Summary từ Google Drive
                 logger.info(
                     f"📝 Đang tải dữ liệu Markdown & Summary cho tài liệu: {item_id}"
                 )
@@ -159,7 +181,7 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
                 summary_bytes = download_from_drive(drive_service, summary_drive_id)
                 summary_text = summary_bytes.decode("utf-8")
 
-                # 6. Thực hiện Chunking (Truyền cả tóm tắt và nội dung)
+                # 7. Thực hiện Chunking (Gọi LLM)
                 final_sections = process_and_chunk(summary_text, md_text)
 
                 if not final_sections:
@@ -167,8 +189,7 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 7. Tạo cấu trúc thư mục và lưu từng file chunk_x.md
-                item_folder = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_{item_id}")
+                # 8. Tạo cấu trúc thư mục và lưu từng file chunk_x.md
                 os.makedirs(item_folder, exist_ok=True)
 
                 for idx, section in enumerate(final_sections):
@@ -180,13 +201,8 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
                     f"📁 Đã tạo {len(final_sections)} file chunks trong thư mục: {item_folder}"
                 )
 
-                # 8. Nén thư mục thành file ZIP
-                zip_base_path = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_zip_{item_id}")
+                # 9. Nén thư mục thành file ZIP
                 shutil.make_archive(zip_base_path, "zip", item_folder)
-                zip_file_path = f"{zip_base_path}.zip"
-
-                # 9. Tính Hash file ZIP
-                zip_file_hash = calculate_file_hash(zip_file_path)
 
                 # 10. Upload ZIP lên Google Drive
                 logger.info(f"☁️ Đang tải file nén lên Google Drive...")
@@ -199,9 +215,9 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG: Yield dữ liệu mới
+                # 11. THÀNH CÔNG: Yield dữ liệu mới
                 logger.success(
-                    f"✅ Đã xử lý phân mảnh (chunking) thành công cho {item_id}"
+                    f"✅ Đã xử lý phân mảnh (chunking) thành công cho {item_id} (Drive ID: {new_drive_id})"
                 )
                 success_item_ids.append(item_id)
 
@@ -209,22 +225,19 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
                     "drive_id": new_drive_id,
-                    "md_hash": md_file_hash,
-                    "zip_hash": zip_file_hash,
+                    "md_hash": current_md_md5,  # QUAN TRỌNG: Lưu lại hash của input
+                    # KHÔNG lưu zip_hash nữa
                 }
-
-                # Dọn dẹp thư mục làm việc
-                shutil.rmtree(item_folder, ignore_errors=True)
-                if os.path.exists(zip_file_path):
-                    os.remove(zip_file_path)
 
             except Exception as e:
                 logger.error(f"💥 Lỗi tại item {item_id}: {e}")
                 error_item_ids.append(item_id)
 
-                if "item_folder" in locals() and os.path.exists(item_folder):
+            finally:
+                # Dọn dẹp thư mục làm việc dù thành công hay thất bại (tránh rác máy local)
+                if os.path.exists(item_folder):
                     shutil.rmtree(item_folder, ignore_errors=True)
-                if "zip_file_path" in locals() and os.path.exists(zip_file_path):
+                if os.path.exists(zip_file_path):
                     os.remove(zip_file_path)
 
     finally:

@@ -12,8 +12,17 @@ import workflow_config
 from rag import custom_prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_file_hash, get_existing_hash_from_db
+
+# Cập nhật import Google Drive
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+    upload_to_drive,
+)
+
+# Cập nhật import Hash Helper
+from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -24,7 +33,6 @@ config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 
 
-# Đã bỏ comment và sẵn sàng sử dụng
 def get_context_from_ollama(summary_text, chunk_text, max_retries=3):
     messages = [
         SystemMessage(
@@ -62,52 +70,63 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
             return
 
         for item_id in pending_item_ids:
+            item_workspace = os.path.join(PATH_FOLDER_OUTPUT, f"workspace_{item_id}")
+            zip_base_output_path = os.path.join(
+                PATH_FOLDER_OUTPUT, f"contextualized_{item_id}"
+            )
+            final_zip_path = f"{zip_base_output_path}.zip"
+
             try:
-                # 1. Lấy Hash và Drive ID của Summary & Chunks từ Database
-                summary_hash, summary_drive_id = get_existing_hash_from_db(
-                    conn, "document_summary", item_id, "txt_hash", "drive_id"
+                # 1. Lấy Drive ID của Summary & Chunks từ Database
+                summary_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_summary", item_id, "drive_id"
                 )
-                chunk_zip_hash, chunk_drive_id = get_existing_hash_from_db(
-                    conn,
-                    "document_chunking",
-                    item_id,
-                    "zip_hash",
-                    "drive_id"
-                    # Chú ý: Đã đổi "document_chunk" thành "document_chunking" cho khớp với file trước
+                chunk_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_chunking", item_id, "drive_id"
                 )
 
                 if not summary_drive_id or not chunk_drive_id:
                     logger.warning(
-                        f"⚠️ Bỏ qua {item_id}: Thiếu dữ liệu Summary hoặc Chunks trong DB."
+                        f"⚠️ Bỏ qua {item_id}: Thiếu dữ liệu Summary hoặc Chunks (không có drive_id)."
                     )
                     error_item_ids.append(item_id)
                     continue
 
-                # 2. Truy vấn lịch sử từ bảng document_context
-                old_summary_hash, old_chunk_zip_hash = get_existing_hash_from_db(
-                    conn, "document_context", item_id, "summary_hash", "chunk_zip_hash"
+                # 2. Lấy mã MD5 hiện tại của cả 2 file trực tiếp từ Google Drive API
+                current_summary_md5 = get_drive_file_md5(
+                    drive_service, summary_drive_id
+                )
+                current_chunk_md5 = get_drive_file_md5(drive_service, chunk_drive_id)
+
+                if not current_summary_md5 or not current_chunk_md5:
+                    logger.warning(
+                        f"⚠️ Bỏ qua {item_id}: Không lấy được MD5 từ Google Drive."
+                    )
+                    error_item_ids.append(item_id)
+                    continue
+
+                # 3. Truy vấn lịch sử từ bảng document_context (lấy MD5 cũ)
+                old_summary_md5, old_chunk_md5 = get_existing_hash_from_db(
+                    conn, "document_context", item_id, "summary_md5", "chunk_md5"
                 )
 
-                # 3. THÀNH CÔNG 1: Skip nếu cả Tóm tắt và Chunks đều không có thay đổi
+                # 4. TRẠM GÁC: Skip nếu cả Tóm tắt và Chunks đều không có thay đổi
                 if (
-                    old_summary_hash == summary_hash
-                    and old_chunk_zip_hash == chunk_zip_hash
+                    old_summary_md5 == current_summary_md5
+                    and old_chunk_md5 == current_chunk_md5
                 ):
                     logger.info(
-                        f"⏭️ Bỏ qua {item_id}: Dữ liệu nội dung và tóm tắt không đổi."
+                        f"⏭️ Bỏ qua {item_id}: Cả Summary và Chunks không đổi, không cần sinh lại ngữ cảnh."
                     )
                     success_item_ids.append(item_id)
                     continue
 
-                # 4. Tải dữ liệu Tóm tắt
+                # 5. TIẾN HÀNH: Tải dữ liệu Tóm tắt
                 logger.info(f"📥 Đang tải dữ liệu tóm tắt và chunks cho: {item_id}")
                 summary_bytes = download_from_drive(drive_service, summary_drive_id)
                 summary_text = summary_bytes.decode("utf-8")
 
-                # 5. Tải và giải nén Chunks Zip
-                item_workspace = os.path.join(
-                    PATH_FOLDER_OUTPUT, f"workspace_{item_id}"
-                )
+                # 6. Thiết lập workspace, tải và giải nén Chunks Zip
                 extract_dir = os.path.join(item_workspace, "raw_chunks")
                 contextualized_dir = os.path.join(
                     item_workspace, "contextualized_chunks"
@@ -118,12 +137,13 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
 
                 zip_local_path = os.path.join(item_workspace, f"raw_{item_id}.zip")
                 zip_bytes = download_from_drive(drive_service, chunk_drive_id)
+
                 with open(zip_local_path, "wb") as f:
                     f.write(zip_bytes)
 
                 shutil.unpack_archive(zip_local_path, extract_dir)
 
-                # 6. Duyệt qua từng chunk và tạo Context bằng Ollama
+                # 7. Duyệt qua từng chunk và tạo Context bằng Ollama
                 chunk_files = [f for f in os.listdir(extract_dir) if f.endswith(".md")]
                 logger.info(
                     f"🔍 Bắt đầu tạo ngữ cảnh cho {len(chunk_files)} đoạn (chunks)..."
@@ -157,15 +177,8 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
                     with open(contextualized_chunk_path, "w", encoding="utf-8") as f:
                         f.write(final_chunk_content)
 
-                # 7. Đóng gói thư mục contextualized thành file ZIP mới
-                zip_base_output_path = os.path.join(
-                    PATH_FOLDER_OUTPUT, f"contextualized_{item_id}"
-                )
+                # 8. Đóng gói thư mục contextualized thành file ZIP mới
                 shutil.make_archive(zip_base_output_path, "zip", contextualized_dir)
-                final_zip_path = f"{zip_base_output_path}.zip"
-
-                # 8. Tính Hash file ZIP mới
-                new_context_zip_hash = calculate_file_hash(final_zip_path)
 
                 # 9. Upload ZIP lên Google Drive
                 logger.info(f"☁️ Đang tải file Context Zip lên Google Drive...")
@@ -178,7 +191,7 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG 2: Yield dữ liệu mới
+                # 10. THÀNH CÔNG: Yield dữ liệu mới (lưu 2 input hash)
                 logger.success(f"✅ Đã xử lý ngữ cảnh thành công cho {item_id}")
                 success_item_ids.append(item_id)
 
@@ -186,24 +199,20 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
                     "drive_id": new_drive_id,
-                    "summary_hash": summary_hash,
-                    "chunk_zip_hash": chunk_zip_hash,
-                    "context_zip_hash": new_context_zip_hash,
+                    "summary_md5": current_summary_md5,  # Lưu lại để làm trạm gác lần sau
+                    "chunk_md5": current_chunk_md5,  # Lưu lại để làm trạm gác lần sau
+                    # KHÔNG còn context_zip_hash nữa
                 }
-
-                # Dọn dẹp thư mục làm việc sau khi xong
-                shutil.rmtree(item_workspace, ignore_errors=True)
-                if os.path.exists(final_zip_path):
-                    os.remove(final_zip_path)
 
             except Exception as e:
                 logger.error(f"💥 Lỗi tại item {item_id}: {e}")
                 error_item_ids.append(item_id)
 
-                # Cố gắng dọn dẹp nếu có lỗi xảy ra giữa chừng để tránh rác ổ cứng
-                if "item_workspace" in locals():
+            finally:
+                # Đảm bảo rác workspace và zip luôn được dọn dẹp sạch sẽ
+                if os.path.exists(item_workspace):
                     shutil.rmtree(item_workspace, ignore_errors=True)
-                if "final_zip_path" in locals() and os.path.exists(final_zip_path):
+                if os.path.exists(final_zip_path):
                     os.remove(final_zip_path)
 
     finally:

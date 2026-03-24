@@ -9,8 +9,13 @@ from loguru import logger
 import env
 import workflow_config
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_string_hash, get_existing_hash_from_db
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+    upload_to_drive,
+)
+from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -59,8 +64,8 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
             file_path = os.path.join(PATH_FOLDER_OUTPUT, file_name)
 
             try:
-                _, raw_drive_id = get_existing_hash_from_db(
-                    conn, "document_detail", item_id, "file_hash", "drive_id"
+                raw_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_detail", item_id, "drive_id"
                 )
 
                 if not raw_drive_id:
@@ -83,26 +88,37 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 3. Tính toán Hash của nội dung ĐÃ CLEAN
-                new_content_hash = calculate_string_hash(clean_html)
-
-                # Lấy hash và drive_id của nội dung ĐÃ CLEAN (từ bảng document_content)
-                old_content_hash, old_clean_drive_id = get_existing_hash_from_db(
-                    conn, "document_content", item_id, "file_hash", "drive_id"
-                )
-
-                # THÀNH CÔNG 1: Nội dung clean không thay đổi
-                if old_content_hash == new_content_hash:
-                    logger.info(f"⏭️ Bỏ qua {item_id} vì nội dung clean không đổi.")
-                    success_item_ids.append(item_id)
-                    continue
-
-                # 4. Ghi file nội dung clean ra thư mục local
+                # 3. Ghi file nội dung clean ra thư mục local TRƯỚC
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(clean_html)
                 logger.info(f"💾 Đã lưu file clean tại: {file_path}")
 
-                # 5. Upload file clean lên thư mục Drive MỚI
+                # 4. Tính toán MD5 của file clean vừa lưu
+                local_clean_md5 = calculate_file_md5(file_path)
+
+                if not local_clean_md5:
+                    error_item_ids.append(item_id)
+                    continue
+
+                # 5. Kiểm tra xem đã có bản clean trên Drive chưa (từ bảng document_content)
+                old_clean_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_content", item_id, "drive_id"
+                )
+
+                if old_clean_drive_id:
+                    drive_clean_md5 = get_drive_file_md5(
+                        drive_service, old_clean_drive_id
+                    )
+
+                    # THÀNH CÔNG 1: Nội dung clean không thay đổi
+                    if drive_clean_md5 == local_clean_md5:
+                        logger.info(
+                            f"⏭️ Bỏ qua {item_id} vì nội dung clean không đổi trên Drive."
+                        )
+                        success_item_ids.append(item_id)
+                        continue
+
+                # 6. Upload file clean lên thư mục Drive MỚI
                 new_clean_drive_id = upload_to_drive(
                     drive_service, file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
                 )
@@ -113,7 +129,7 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG 2: Upload file clean mới thành công -> Yield
+                # THÀNH CÔNG 2: Upload file clean mới thành công -> Yield (Bỏ trường file_hash)
                 logger.success(
                     f"✅ Đã upload file clean {item_id} (Drive ID: {new_clean_drive_id})"
                 )
@@ -123,7 +139,6 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
                     "drive_id": new_clean_drive_id,
-                    "file_hash": new_content_hash,  # Lưu hash của nội dung clean
                 }
 
             except Exception as e:

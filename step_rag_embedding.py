@@ -13,8 +13,16 @@ from loguru import logger
 import env
 import workflow_config
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service
-from utils.hash_helper import get_existing_hash_from_db
+
+# Cập nhật import Google Drive
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+)
+
+# Cập nhật import Hash Helper
+from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -67,38 +75,54 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
             return
 
         for item_id in pending_item_ids:
+            item_workspace = os.path.join(
+                PATH_FOLDER_OUTPUT, f"embed_workspace_{item_id}"
+            )
+
             try:
-                # 1. Lấy Hash và Drive ID của file ZIP ĐÃ CÓ NGỮ CẢNH từ bước trước
-                context_zip_hash, context_drive_id = get_existing_hash_from_db(
-                    conn, "document_context", item_id, "context_zip_hash", "drive_id"
+                # 1. Lấy Drive ID của file ZIP từ bước Context
+                context_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_context", item_id, "drive_id"
                 )
 
                 if not context_drive_id:
                     logger.warning(
-                        f"⚠️ Bỏ qua {item_id}: Không tìm thấy file ZIP Context trong Database."
+                        f"⚠️ Bỏ qua {item_id}: Không tìm thấy file ZIP Context (không có drive_id)."
                     )
-                    error_item_ids.append(item_id)  # Ghi nhận lỗi
+                    error_item_ids.append(item_id)
                     continue
 
-                # 2. Truy vấn lịch sử xử lý Embedding
-                # Lưu ý: Vì bảng embedding không có drive_id, ta truyền tạm cột 'status' làm đối số thứ 2 cho hàm helper
-                old_context_zip_hash, _ = get_existing_hash_from_db(
-                    conn, "document_embedding", item_id, "context_zip_hash", "status"
+                # 2. Gọi API Drive để lấy MD5 hiện tại của file ZIP này
+                current_context_md5 = get_drive_file_md5(
+                    drive_service, context_drive_id
                 )
 
-                # 3. THÀNH CÔNG 1: Bỏ qua nếu dữ liệu đầu vào không thay đổi
-                if old_context_zip_hash == context_zip_hash:
-                    logger.info(f"⏭️ Bỏ qua {item_id}: Nội dung chunks không thay đổi.")
-                    success_item_ids.append(item_id)
-                    continue  # NGẮT LUỒNG, KHÔNG YIELD
+                if not current_context_md5:
+                    logger.warning(
+                        f"⚠️ Bỏ qua {item_id}: Không lấy được MD5 từ Google Drive."
+                    )
+                    error_item_ids.append(item_id)
+                    continue
 
-                # 4. Tải và giải nén file Chunks Context
+                # 3. Truy vấn lịch sử xử lý Embedding
+                # Bảng này không lưu drive_id, nên ta lấy 'status' làm đối số thứ 2
+                old_context_md5, _ = get_existing_hash_from_db(
+                    conn, "document_embedding", item_id, "context_md5", "status"
+                )
+
+                # 4. TRẠM GÁC: Bỏ qua nếu dữ liệu đầu vào không thay đổi
+                if old_context_md5 == current_context_md5:
+                    logger.info(
+                        f"⏭️ Bỏ qua {item_id}: Nội dung chunks không thay đổi, vector đã up-to-date."
+                    )
+                    success_item_ids.append(item_id)
+                    continue
+
+                # 5. TIẾN HÀNH: Tải và giải nén file Chunks Context
                 logger.info(
                     f"📥 Đang tải và giải nén Chunks (Context) cho tài liệu: {item_id}"
                 )
-                item_workspace = os.path.join(
-                    PATH_FOLDER_OUTPUT, f"embed_workspace_{item_id}"
-                )
+
                 extract_dir = os.path.join(item_workspace, "chunks")
                 os.makedirs(extract_dir, exist_ok=True)
 
@@ -109,7 +133,7 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
 
                 shutil.unpack_archive(zip_path, extract_dir)
 
-                # 5. Xử lý Documents và lưu vào Vector DB
+                # 6. Xử lý Documents và lưu vào Vector DB
                 chunk_files = [f for f in os.listdir(extract_dir) if f.endswith(".md")]
                 logger.info(
                     f"🧠 Đang tạo vector và lưu vào database cho {len(chunk_files)} chunks..."
@@ -140,34 +164,34 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     )
                     doc_ids.append(doc_id)
 
-                # Tiến hành nhúng (Embed) và lưu
+                # 7. Tiến hành nhúng (Embed) và lưu
                 if documents:
                     vectorstore.add_documents(documents=documents, ids=doc_ids)
                     logger.success(
                         f"✅ Đã lưu {len(documents)} vectors vào Postgres cho: {item_id}"
                     )
 
-                # THÀNH CÔNG 2: Yield trạng thái hoàn thành vào DLT Pipeline
+                # 8. THÀNH CÔNG: Yield trạng thái hoàn thành vào DLT Pipeline
                 success_item_ids.append(item_id)
                 yield {
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
-                    "context_zip_hash": context_zip_hash,  # Lưu hash của file nguồn để đối chiếu lần sau
+                    "context_md5": current_context_md5,  # Lưu lại hash của file nguồn để làm trạm gác lần sau
                     "vector_count": len(documents),
                     "status": "embedded",
                 }
 
-                # Dọn dẹp thư mục sau khi lưu xong
-                shutil.rmtree(item_workspace, ignore_errors=True)
-
             except Exception as e:
                 logger.error(f"💥 Lỗi tại item {item_id}: {e}")
-                error_item_ids.append(item_id)  # Đưa vào danh sách chạy lại
+                error_item_ids.append(item_id)
 
-                # Dọn dẹp nếu có lỗi
-                if "item_workspace" in locals() and os.path.exists(item_workspace):
+            finally:
+                # Dọn dẹp an toàn: Dù thành công hay lỗi, luôn xoá sạch folder tạm
+                if os.path.exists(item_workspace):
                     shutil.rmtree(item_workspace, ignore_errors=True)
 
+    except Exception as e:
+        logger.error(f"Lỗi hệ thống Database/Drive: {e}")
     finally:
         if "conn" in locals() and conn:
             conn.close()

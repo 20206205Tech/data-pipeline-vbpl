@@ -9,8 +9,17 @@ from markdownify import markdownify
 import env
 import workflow_config
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_string_hash, get_existing_hash_from_db
+
+# Mở comment và import đủ các hàm Drive, nhớ thêm get_drive_file_md5
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+    upload_to_drive,
+)
+
+# Đổi sang sử dụng hàm lấy drive_id và tính MD5
+from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -58,17 +67,21 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
             file_path = os.path.join(PATH_FOLDER_OUTPUT, file_name)
 
             try:
-                _, drive_content_file_id = get_existing_hash_from_db(
-                    conn, "document_content", item_id, "file_hash", "drive_id"
+                # 1. Lấy drive_id của nội dung html đã clean từ bảng document_content
+                drive_content_file_id = get_existing_drive_id_from_db(
+                    conn, "document_content", item_id, "drive_id"
                 )
 
                 if not drive_content_file_id:
-                    logger.warning(f"Không tìm thấy drive_id nội dung cho {item_id}")
+                    logger.warning(
+                        f"Không tìm thấy drive_id nội dung html clean cho {item_id}"
+                    )
                     error_item_ids.append(item_id)
                     continue
 
                 logger.info(f"Đang xử lý Markdown cho item: {item_id}")
 
+                # 2. Tải HTML clean về và convert sang Markdown
                 html_bytes = download_from_drive(drive_service, drive_content_file_id)
                 html_text = html_bytes.decode("utf-8")
 
@@ -79,25 +92,36 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                new_file_hash = calculate_string_hash(md_content)
-
-                # Kiểm tra hash cũ trong database
-                old_hash, _ = get_existing_hash_from_db(
-                    conn, "document_markdown", item_id, "file_hash", "drive_id"
-                )
-
-                # THÀNH CÔNG 1: Markdown không thay đổi -> Bỏ qua
-                if old_hash == new_file_hash:
-                    logger.info(f"⏭️ Bỏ qua {item_id} vì nội dung Markdown không đổi.")
-                    success_item_ids.append(item_id)
-                    continue
-
-                # TIẾN HÀNH: Ghi file local
+                # 3. TIẾN HÀNH: Ghi file local TRƯỚC để tính MD5
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(md_content)
                 logger.info(f"💾 Đã lưu file local: {file_path}")
 
-                # Upload lên Google Drive
+                # 4. Tính MD5 của file Markdown vừa lưu
+                local_md5 = calculate_file_md5(file_path)
+
+                if not local_md5:
+                    error_item_ids.append(item_id)
+                    continue
+
+                # 5. Kiểm tra xem đã có bản Markdown trên Drive chưa (từ bảng document_markdown)
+                old_markdown_drive_id = get_existing_drive_id_from_db(
+                    conn, "document_markdown", item_id, "drive_id"
+                )
+
+                if old_markdown_drive_id:
+                    # Gọi API lấy MD5 của file trên Drive về
+                    drive_md5 = get_drive_file_md5(drive_service, old_markdown_drive_id)
+
+                    # THÀNH CÔNG 1: Markdown không thay đổi -> Bỏ qua
+                    if drive_md5 == local_md5:
+                        logger.info(
+                            f"⏭️ Bỏ qua {item_id} vì nội dung Markdown không đổi trên Drive."
+                        )
+                        success_item_ids.append(item_id)
+                        continue
+
+                # 6. Upload file Markdown lên Google Drive
                 new_drive_id = upload_to_drive(
                     drive_service, file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
                 )
@@ -107,7 +131,7 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)  # Ghi nhận lỗi
                     continue
 
-                # THÀNH CÔNG 2: Upload mới thành công
+                # 7. THÀNH CÔNG 2: Upload mới thành công -> Yield (Bỏ trường file_hash)
                 logger.success(
                     f"✅ Đã upload Markdown cho {item_id} (Drive ID: {new_drive_id})"
                 )
@@ -117,7 +141,6 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
                     "drive_id": new_drive_id,
-                    "file_hash": new_file_hash,
                 }
 
             except Exception as e:

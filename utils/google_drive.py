@@ -110,3 +110,14 @@ def download_from_drive(service, file_id):
     while not done:
         status, done = downloader.next_chunk()
     return fh.getvalue()
+
+
+def get_drive_file_md5(drive_service, file_id):
+    try:
+        file_metadata = (
+            drive_service.files().get(fileId=file_id, fields="md5Checksum").execute()
+        )
+        return file_metadata.get("md5Checksum")
+    except Exception as e:
+        logger.error(f"Lỗi lấy md5Checksum từ Google Drive cho file {file_id}: {e}")
+        return None

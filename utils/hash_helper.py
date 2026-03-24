@@ -4,29 +4,41 @@ import psycopg2
 from loguru import logger
 
 
-def calculate_file_hash(file_path):
-    hasher = hashlib.sha256()
+def calculate_file_md5(file_path):
+    hasher = hashlib.md5()
     try:
         with open(file_path, "rb") as f:
             hasher.update(f.read())
         return hasher.hexdigest()
     except Exception as e:
-        logger.error(f"Lỗi tính hash file {file_path}: {e}")
+        logger.error(f"Lỗi tính MD5 file {file_path}: {e}")
         return None
 
 
-def calculate_string_hash(content_string):
-    hasher = hashlib.sha256()
+def get_existing_drive_id_from_db(conn, table_name, item_id, file_id_column="drive_id"):
     try:
-        hasher.update(content_string.encode("utf-8"))
-        return hasher.hexdigest()
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT {file_id_column}
+                FROM "public"."{table_name}"
+                WHERE item_id = %s
+                """,
+                (str(item_id),),
+            )
+            row = cur.fetchone()
+            if row:
+                return row[0]
+    except psycopg2.errors.UndefinedTable:
+        conn.rollback()
     except Exception as e:
-        logger.error(f"Lỗi tính hash chuỗi: {e}")
-        return None
+        logger.debug(f"Lỗi truy vấn drive_id cho {item_id} ở bảng {table_name}: {e}")
+        conn.rollback()
+    return None
 
 
 def get_existing_hash_from_db(
-    conn, table_name, item_id, file_hash_column, file_id_column
+    conn, table_name, item_id, file_hash_column, file_id_column="drive_id"
 ):
     try:
         with conn.cursor() as cur:
@@ -36,7 +48,7 @@ def get_existing_hash_from_db(
                 FROM "public"."{table_name}"
                 WHERE item_id = %s
                 """,
-                (item_id,),
+                (str(item_id),),
             )
             row = cur.fetchone()
             if row:

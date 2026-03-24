@@ -10,7 +10,7 @@ import env
 import workflow_config
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import download_from_drive, get_drive_service
-from utils.hash_helper import get_existing_hash_from_db
+from utils.hash_helper import get_existing_drive_id_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
@@ -119,7 +119,6 @@ def extract_metadata_from_html(item_id, html_content):
                 metadata["signer"] = valid_texts[-1]
 
         # 6. KIỂM TRA ĐỊNH DẠNG FILE
-        # Nếu không tìm thấy bất kỳ trường dữ liệu cốt lõi nào, file khả năng cao đã sai cấu trúc HTML
         core_fields = [
             metadata["title"],
             metadata["document_number"],
@@ -133,7 +132,6 @@ def extract_metadata_from_html(item_id, html_content):
         return metadata
 
     except ValueError as ve:
-        # Re-raise lỗi định dạng để hàm gọi bên ngoài bắt được chính xác
         raise ve
     except Exception as e:
         logger.error(f"Lỗi parse item {item_id}: {e}")
@@ -163,8 +161,9 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
 
         for item_id in pending_item_ids:
             try:
-                file_hash, drive_id = get_existing_hash_from_db(
-                    conn, "document_detail", item_id, "file_hash", "drive_id"
+                # CẬP NHẬT: Chỉ lấy drive_id từ DB, bỏ file_hash
+                drive_id = get_existing_drive_id_from_db(
+                    conn, "document_detail", item_id, "drive_id"
                 )
 
                 if not drive_id:
