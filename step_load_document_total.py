@@ -4,6 +4,7 @@ from loguru import logger
 from output_document_total import PATH_FILE_OUTPUT
 from utils.config_by_path import ConfigByPath
 from utils.jsonl_helper import yield_jsonl_records
+from utils.workflow_helper import get_workflow_item_counts_via_pipeline
 
 config_by_path = ConfigByPath(__file__)
 
@@ -21,6 +22,8 @@ def main():
     )
     info = pipeline.run(document_total_resource())
     logger.info(f"Kết quả pipeline: {info}")
+
+    get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":

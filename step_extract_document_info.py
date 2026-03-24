@@ -14,6 +14,7 @@ from utils.hash_helper import get_existing_drive_id_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
+    get_workflow_item_counts_via_pipeline,
     log_workflow_state,
 )
 
@@ -243,6 +244,8 @@ def main():
                 end_time=datetime.now(),
             )
         )
+
+    get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import dlt
 from loguru import logger
@@ -147,3 +147,31 @@ def fetch_and_lock_pending_tasks(conn, step_code: str, limit: int = None) -> lis
             f"Đã khóa thành công {len(locked_items)} item(s) cho step_code='{step_code}'."
         )
         return locked_items
+
+
+def get_workflow_item_counts_via_pipeline(
+    pipeline: dlt.Pipeline,
+) -> List[Tuple[int, int]]:
+    query = """
+        SELECT workflow_id, COUNT(*)
+        FROM "public"."document_state"
+        GROUP BY workflow_id
+        ORDER BY COUNT(*) DESC;
+    """
+
+    logger.info(f"Bắt đầu lấy thống kê từ pipeline: {pipeline.pipeline_name}")
+
+    try:
+        with pipeline.sql_client() as client:
+            rows = client.execute_sql(query)
+
+            logger.info(f"Đã lấy thành công thống kê cho {len(rows)} workflow(s).")
+
+            for workflow_id, count in rows:
+                logger.debug(f"Workflow ID: {workflow_id}, Item Count: {count}")
+
+            return rows
+
+    except Exception as e:
+        logger.error(f"Lỗi database khi lấy thống kê workflow: {e}")
+        raise
