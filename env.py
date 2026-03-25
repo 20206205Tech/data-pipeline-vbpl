@@ -27,6 +27,10 @@ if CRAWL_DATA_ENV_DEV:
     CRAWL_DATA_OPEN_IN_BROWSER = False
 
 
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGSMITH_TRACING"] = "false"
+
+
 VECTOR_DATABASE_URL = env.str("VECTOR_DATABASE_URL")
 
 
