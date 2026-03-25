@@ -19,7 +19,7 @@ class DocumentDetailSpider(scrapy.Spider):
 
     def start_requests(self):
         # limit = 2 if env.CRAWL_DATA_ENV_DEV else 50
-        limit = 2 if env.CRAWL_DATA_ENV_DEV else 100
+        limit = 2 if env.CRAWL_DATA_ENV_DEV else 500
         pending_item_ids = []
 
         conn = None
