@@ -7,8 +7,9 @@ import psycopg2
 import torch
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_postgres.vectorstores import PGVector
+from langchain_pinecone import PineconeVectorStore
 from loguru import logger
+from pinecone import Pinecone
 
 import env
 import workflow_config
@@ -42,11 +43,12 @@ embeddings_model = HuggingFaceEmbeddings(
     encode_kwargs={"normalize_embeddings": True},
 )
 
-vectorstore = PGVector(
-    embeddings=embeddings_model,
-    collection_name="vbpl",
-    connection=env.VECTOR_DATABASE_URL,
-    use_jsonb=True,
+
+pc = Pinecone(api_key=env.PINECONE_API_KEY)
+pinecone_index = pc.Index(env.PINECONE_INDEX_NAME)
+
+vectorstore = PineconeVectorStore(
+    index=pinecone_index, embedding=embeddings_model, text_key="text"
 )
 
 
@@ -103,26 +105,13 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     )
 
                     try:
-                        with psycopg2.connect(env.VECTOR_DATABASE_URL) as vec_conn:
-                            with vec_conn.cursor() as vec_cur:
-                                vec_cur.execute(
-                                    "SELECT uuid FROM langchain_pg_collection WHERE name = 'vbpl'"
-                                )
-                                col_row = vec_cur.fetchone()
-                                if col_row:
-                                    collection_id = col_row[0]
-
-                                    vec_cur.execute(
-                                        "DELETE FROM langchain_pg_embedding WHERE collection_id = %s AND cmetadata->>'item_id' = %s",
-                                        (collection_id, str(item_id)),
-                                    )
-                                    vec_conn.commit()
-                                    logger.success(
-                                        f"✅ Đã xóa sạch vector cũ của {item_id}."
-                                    )
+                        pinecone_index.delete(filter={"item_id": {"$eq": str(item_id)}})
+                        logger.success(
+                            f"✅ Đã xóa sạch vector cũ của {item_id} trên Pinecone."
+                        )
                     except Exception as delete_err:
                         logger.error(
-                            f"❌ Lỗi khi xóa vector của {item_id}: {delete_err}"
+                            f"❌ Lỗi khi xóa vector của {item_id} trên Pinecone: {delete_err}"
                         )
                         error_item_ids.append(item_id)
                         continue
@@ -218,7 +207,7 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                 if documents:
                     vectorstore.add_documents(documents=documents, ids=doc_ids)
                     logger.success(
-                        f"✅ Đã lưu {len(documents)} vectors vào Postgres cho: {item_id}"
+                        f"✅ Đã lưu {len(documents)} vectors vào Vector DB cho: {item_id}"
                     )
 
                 success_item_ids.append(item_id)
