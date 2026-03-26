@@ -288,4 +288,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if not env.CRAWL_DATA_ENV_DEV:
+        main()
+
+    logger.error("🚧 Chạy ở chế độ DEV")
