@@ -18,8 +18,7 @@ class DocumentDetailSpider(scrapy.Spider):
         return psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
 
     def start_requests(self):
-        # limit = 2 if env.CRAWL_DATA_ENV_DEV else 50
-        limit = 2 if env.CRAWL_DATA_ENV_DEV else 500
+        limit = 2 if env.CRAWL_DATA_ENV_DEV else 300
         pending_item_ids = []
 
         conn = None
