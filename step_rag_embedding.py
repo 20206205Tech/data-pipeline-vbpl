@@ -77,7 +77,66 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
             )
 
             try:
-                # 1. Lấy Drive ID của file ZIP từ bước Context
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT status FROM document_info WHERE item_id = %s",
+                        (item_id,),
+                    )
+                    status_row = cursor.fetchone()
+                    raw_status = status_row[0] if status_row else None
+
+                safe_status = (
+                    raw_status.strip()
+                    if raw_status and raw_status.strip()
+                    else "Chưa xác định"
+                )
+
+                status_to_delete = [
+                    "Hết hiệu lực toàn bộ",
+                    "Ngưng hiệu lực",
+                    "Không còn phù hợp",
+                ]
+
+                if safe_status in status_to_delete:
+                    logger.info(
+                        f"🗑️ Tài liệu {item_id} có trạng thái '{safe_status}'. Đang tiến hành xóa khỏi Vector DB..."
+                    )
+
+                    try:
+                        with psycopg2.connect(env.VECTOR_DATABASE_URL) as vec_conn:
+                            with vec_conn.cursor() as vec_cur:
+                                vec_cur.execute(
+                                    "SELECT uuid FROM langchain_pg_collection WHERE name = 'vbpl'"
+                                )
+                                col_row = vec_cur.fetchone()
+                                if col_row:
+                                    collection_id = col_row[0]
+
+                                    vec_cur.execute(
+                                        "DELETE FROM langchain_pg_embedding WHERE collection_id = %s AND cmetadata->>'item_id' = %s",
+                                        (collection_id, str(item_id)),
+                                    )
+                                    vec_conn.commit()
+                                    logger.success(
+                                        f"✅ Đã xóa sạch vector cũ của {item_id}."
+                                    )
+                    except Exception as delete_err:
+                        logger.error(
+                            f"❌ Lỗi khi xóa vector của {item_id}: {delete_err}"
+                        )
+                        error_item_ids.append(item_id)
+                        continue
+
+                    success_item_ids.append(item_id)
+                    yield {
+                        "item_id": item_id,
+                        "update_at": datetime.now().isoformat(),
+                        "context_md5": None,
+                        "vector_count": 0,
+                        "status": "deleted",
+                    }
+                    continue
+
                 context_drive_id = get_existing_drive_id_from_db(
                     conn, "document_context", item_id, "drive_id"
                 )
@@ -89,7 +148,6 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 2. Gọi API Drive để lấy MD5 hiện tại của file ZIP này
                 current_context_md5 = get_drive_file_md5(
                     drive_service, context_drive_id
                 )
@@ -101,13 +159,10 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 3. Truy vấn lịch sử xử lý Embedding
-                # Bảng này không lưu drive_id, nên ta lấy 'status' làm đối số thứ 2
                 old_context_md5, _ = get_existing_hash_from_db(
                     conn, "document_embedding", item_id, "context_md5", "status"
                 )
 
-                # 4. TRẠM GÁC: Bỏ qua nếu dữ liệu đầu vào không thay đổi
                 if old_context_md5 == current_context_md5:
                     logger.info(
                         f"⏭️ Bỏ qua {item_id}: Nội dung chunks không thay đổi, vector đã up-to-date."
@@ -115,7 +170,6 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     success_item_ids.append(item_id)
                     continue
 
-                # 5. TIẾN HÀNH: Tải và giải nén file Chunks Context
                 logger.info(
                     f"📥 Đang tải và giải nén Chunks (Context) cho tài liệu: {item_id}"
                 )
@@ -130,7 +184,6 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
 
                 shutil.unpack_archive(zip_path, extract_dir)
 
-                # 6. Xử lý Documents và lưu vào Vector DB
                 chunk_files = [f for f in os.listdir(extract_dir) if f.endswith(".md")]
                 logger.info(
                     f"🧠 Đang tạo vector và lưu vào database cho {len(chunk_files)} chunks..."
@@ -156,24 +209,22 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                             metadata={
                                 "item_id": str(item_id),
                                 "source": chunk_filename,
+                                "legal_status": safe_status,
                             },
                         )
                     )
                     doc_ids.append(doc_id)
 
-                # 7. Tiến hành nhúng (Embed) và lưu
                 if documents:
                     vectorstore.add_documents(documents=documents, ids=doc_ids)
                     logger.success(
                         f"✅ Đã lưu {len(documents)} vectors vào Postgres cho: {item_id}"
                     )
 
-                # 8. THÀNH CÔNG: Yield trạng thái hoàn thành vào DLT Pipeline
                 success_item_ids.append(item_id)
                 yield {
                     "item_id": item_id,
                     "update_at": datetime.now().isoformat(),
-                    # Lưu lại hash của file nguồn để làm trạm gác lần sau
                     "context_md5": current_context_md5,
                     "vector_count": len(documents),
                     "status": "embedded",
