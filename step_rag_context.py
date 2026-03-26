@@ -8,7 +8,6 @@ from langchain_core.messages import SystemMessage
 from loguru import logger
 
 import env
-import workflow_config
 from rag import custom_prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
@@ -248,7 +247,7 @@ def main():
 
         pipeline.run(
             document_state_resource(
-                workflow_id=workflow_config.STEP_LOAD_DOCUMENT_LIST.id,
+                workflow_id=0,
                 item_ids=error_item_ids,
                 start_time=start_time,
                 end_time=datetime.now(),

@@ -6,7 +6,6 @@ import psycopg2
 from loguru import logger
 
 import env
-import workflow_config
 from output_document_detail import PATH_FILE_OUTPUT, PATH_FOLDER_OUTPUT
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import get_drive_file_md5, get_drive_service, upload_to_drive
@@ -125,7 +124,7 @@ def main():
 
         pipeline.run(
             document_state_resource(
-                workflow_id=workflow_config.STEP_LOAD_DOCUMENT_LIST.id,
+                workflow_id=0,
                 item_ids=error_item_ids,
                 start_time=start_time,
                 end_time=datetime.now(),

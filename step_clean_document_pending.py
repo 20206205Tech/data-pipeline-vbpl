@@ -4,7 +4,6 @@ from typing import List
 import dlt
 from loguru import logger
 
-import workflow_config
 from utils.config_by_path import ConfigByPath
 from utils.workflow_helper import (
     document_state_resource,
@@ -58,7 +57,7 @@ def main():
 
         pipeline.run(
             document_state_resource(
-                workflow_id=workflow_config.STEP_LOAD_DOCUMENT_LIST.id,
+                workflow_id=0,
                 item_ids=error_item_ids,
                 start_time=start_time,
                 end_time=datetime.now(),
