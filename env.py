@@ -3,6 +3,12 @@ import os
 from environs import Env
 from loguru import logger
 
+log_file_format = "{time:YYYY-MM-DD}.log"
+logger.add(
+    f"logging/{log_file_format}", rotation="00:00", retention="7 days", enqueue=True
+)
+
+
 env = Env()
 logger.info(f"Loading environment variables...")
 
