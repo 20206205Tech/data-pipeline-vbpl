@@ -144,7 +144,7 @@ jobs:
           doppler run -p 20206205tech -c prd -- uv run python step_rag_embedding.py
 
       - name: step_clean_document_pending
-        # if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.step_clean_document_pending == true }}
+        if: always()
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |

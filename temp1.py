@@ -235,8 +235,8 @@ def main():
             dataset_name="public",
             pipeline_name="step_sync_drive_html",
         )
-        info = pipeline.run([detail_resource(sync_data), state_resource(sync_data)])
-        logger.info(f"Kết quả pipeline: {info}")
+        pipeline.run([detail_resource(sync_data), state_resource(sync_data)])
+        # logger.info(f"Kết quả pipeline: {info}")
     else:
         logger.info("🎉 Tất cả dữ liệu đều đã được đồng bộ, không có sự sai khác!")
 

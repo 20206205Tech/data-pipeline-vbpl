@@ -92,13 +92,13 @@ def log_workflow_state(
         )
 
         logger.info(
-            f"Đã lưu lịch sử workflow_id={workflow_id}, pipeline_name={pipeline.pipeline_name} với: item_ids={item_ids}, start_time={start_time}, end_time={end_time}"
+            f"Đã lưu trạng thái workflow_id={workflow_id}: item_ids={item_ids}, start={start_time}, end={end_time}"
         )
 
         return workflow_state_info
 
     except Exception as e:
-        logger.exception(f"Lỗi khi lưu lịch sử: {e}")
+        logger.exception(f"Lỗi khi lưu trạng thái: {e}")
         raise
 
 

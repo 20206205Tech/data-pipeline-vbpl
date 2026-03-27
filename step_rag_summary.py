@@ -20,7 +20,6 @@ from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_f
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
-    get_workflow_item_counts_via_pipeline,
     log_workflow_state,
 )
 
@@ -155,8 +154,8 @@ def main():
     error_item_ids = []
     start_time = datetime.now()
 
-    info = pipeline.run(document_summary_resource(success_item_ids, error_item_ids))
-    logger.info(f"Kết quả pipeline: {info}")
+    pipeline.run(document_summary_resource(success_item_ids, error_item_ids))
+    # logger.info(f"Kết quả pipeline: {info}")
 
     if success_item_ids:
         log_workflow_state(
@@ -182,7 +181,7 @@ def main():
             )
         )
 
-    get_workflow_item_counts_via_pipeline(pipeline)
+    # get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":

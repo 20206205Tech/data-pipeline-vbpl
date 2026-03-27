@@ -13,7 +13,6 @@ from utils.hash_helper import get_existing_drive_id_from_db
 from utils.workflow_helper import (
     document_state_resource,
     fetch_and_lock_pending_tasks,
-    get_workflow_item_counts_via_pipeline,
     log_workflow_state,
 )
 
@@ -152,7 +151,7 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=10,
+            limit=100,
         )
 
         if not pending_item_ids:
@@ -219,8 +218,8 @@ def main():
     error_item_ids = []
     start_time = datetime.now()
 
-    info = pipeline.run(document_info_resource(success_item_ids, error_item_ids))
-    logger.info(f"Kết quả pipeline: {info}")
+    pipeline.run(document_info_resource(success_item_ids, error_item_ids))
+    # logger.info(f"Kết quả pipeline: {info}")
 
     if success_item_ids:
         log_workflow_state(
@@ -244,7 +243,7 @@ def main():
             )
         )
 
-    get_workflow_item_counts_via_pipeline(pipeline)
+    # get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":

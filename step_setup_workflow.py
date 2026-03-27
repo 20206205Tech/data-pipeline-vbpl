@@ -1,7 +1,6 @@
 import dataclasses
 
 import dlt
-from loguru import logger
 
 import workflow_config
 from utils.config_by_path import ConfigByPath
@@ -28,8 +27,8 @@ def main():
         pipeline_name=config_by_path.NAME,
     )
 
-    info = pipeline.run(workflow_resource())
-    logger.info(f"Kết quả pipeline: {info}")
+    pipeline.run(workflow_resource())
+    # logger.info(f"Kết quả pipeline: {info}")
 
 
 if __name__ == "__main__":

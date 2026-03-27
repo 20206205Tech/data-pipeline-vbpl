@@ -1,5 +1,4 @@
 import dlt
-from loguru import logger
 
 from output_document_total import PATH_FILE_OUTPUT
 from utils.config_by_path import ConfigByPath
@@ -19,8 +18,8 @@ def main():
         dataset_name="public",
         pipeline_name=config_by_path.NAME,
     )
-    info = pipeline.run(document_total_resource())
-    logger.info(f"Kết quả pipeline: {info}")
+    pipeline.run(document_total_resource())
+    # logger.info(f"Kết quả pipeline: {info}")
 
 
 if __name__ == "__main__":

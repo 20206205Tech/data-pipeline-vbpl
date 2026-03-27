@@ -178,7 +178,7 @@
 #     start_time = datetime.now()
 
 #     info = pipeline.run(document_chunk(item_ids))
-#     logger.info(f"Kết quả pipeline: {info}")
+#     # logger.info(f"Kết quả pipeline: {info}")
 
 #     if item_ids:
 #         log_workflow_state(
