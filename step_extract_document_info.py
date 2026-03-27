@@ -160,7 +160,6 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
 
         for item_id in pending_item_ids:
             try:
-                # CẬP NHẬT: Chỉ lấy drive_id từ DB, bỏ file_hash
                 drive_id = get_existing_drive_id_from_db(
                     conn, "document_detail", item_id, "drive_id"
                 )
@@ -181,7 +180,7 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
                     and "Sorry, something went wrong" in html_content
                 ):
                     logger.warning(
-                        f"⚠️ Phát hiện file lỗi hệ thống VBPL tại item {item_id}. Đánh dấu để thu thập lại."
+                        f"⚠️ Phát hiện lỗi tại item {item_id}. Đánh dấu để thu thập lại."
                     )
                     error_item_ids.append(item_id)
                     continue
