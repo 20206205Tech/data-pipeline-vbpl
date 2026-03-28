@@ -17,6 +17,10 @@ def main():
         "AUTOTHROTTLE_MAX_DELAY": 60,
         "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
         "AUTOTHROTTLE_DEBUG": False,
+        # --- THÊM CẤU HÌNH TIMEOUT & RETRY TẠI ĐÂY ---
+        "DOWNLOAD_TIMEOUT": 120,  # Chờ tối đa 120 giây (2 phút)
+        "RETRY_ENABLED": False,  # Tắt thử lại để fail ngay sau 2 phút nếu web lỗi
+        # ---------------------------------------------
         "DOWNLOADER_MIDDLEWARES": {
             # Tắt middleware mặc định của Scrapy
             "scrapy.downloadermiddlewares.useragent.UserAgentMiddleware": None,
