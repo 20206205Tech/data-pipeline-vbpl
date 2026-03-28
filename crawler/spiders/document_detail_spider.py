@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 
 import psycopg2
@@ -61,7 +62,7 @@ class DocumentDetailSpider(scrapy.Spider):
                 "🛑 Website không phản hồi sau 2 phút! Đang hủy bỏ tất cả các URL còn lại..."
             )
             self.crawler.engine.close_spider(self, "server_timeout")
-            return
+            sys.exit(1)
 
         if failure.check(HttpError):
             response = failure.value.response
@@ -72,7 +73,7 @@ class DocumentDetailSpider(scrapy.Spider):
                 self.crawler.engine.close_spider(
                     self, f"server_error_{response.status}"
                 )
-                return
+                sys.exit(1)
 
     def parse_detail(self, response):
         if env.CRAWL_DATA_OPEN_IN_BROWSER:
@@ -87,9 +88,9 @@ class DocumentDetailSpider(scrapy.Spider):
                 self.logger.warning(
                     f"⚠️ Bỏ qua item {item_id} vì trang web báo lỗi hệ thống (Sorry, something went wrong)."
                 )
-                # Tùy chọn: Nếu bạn cũng muốn dừng toàn bộ chương trình khi gặp dòng chữ này
+                # Dừng toàn bộ chương trình khi gặp dòng chữ này
                 self.crawler.engine.close_spider(self, "website_content_error")
-                return
+                sys.exit(1)
 
             file_path = os.path.join(PATH_FOLDER_OUTPUT, f"{item_id}.html")
             os.makedirs(PATH_FOLDER_OUTPUT, exist_ok=True)
