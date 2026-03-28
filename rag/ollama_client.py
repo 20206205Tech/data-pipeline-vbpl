@@ -1,3 +1,4 @@
+import sys  # Thêm thư viện sys
 import time
 
 import requests
@@ -30,7 +31,8 @@ def call_ollama(messages, max_retries=3, stream=True):
         logger.error(
             "❌ Ollama server không phản hồi chính xác 'Ollama is running'. Dừng thực thi."
         )
-        return None
+        # Thoát chương trình ngay lập tức với mã lỗi 1
+        sys.exit(1)
 
     for attempt in range(max_retries):
         try:
