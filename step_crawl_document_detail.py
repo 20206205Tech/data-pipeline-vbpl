@@ -53,11 +53,14 @@ def main():
     settings.update(custom_settings)
 
     process = CrawlerProcess(settings)
-    process.crawl(DocumentDetailSpider)
+    crawler = process.create_crawler(DocumentDetailSpider)
+    process.crawl(crawler)
+
     process.start()
 
-    crawler = list(process.crawlers)[0]
-    finish_reason = crawler.stats.get_value("finish_reason")
+    stats = crawler.stats
+    finish_reason = stats.get_value("finish_reason") if stats else "unknown"
+
     if finish_reason != "finished":
         print(f"🛑 Spider đóng bất thường với lý do: {finish_reason}")
         print("❌ Gửi tín hiệu báo lỗi cho GitHub Actions (Exit Code 1)...")
