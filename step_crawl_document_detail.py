@@ -65,9 +65,6 @@ def main():
         print(f"🛑 Spider đóng bất thường với lý do: {finish_reason}")
         print("❌ Gửi tín hiệu báo lỗi cho GitHub Actions (Exit Code 1)...")
         sys.exit(1)
-    else:
-        print("✅ Spider hoàn thành xuất sắc toàn bộ công việc.")
-        sys.exit(0)
 
 
 if __name__ == "__main__":
