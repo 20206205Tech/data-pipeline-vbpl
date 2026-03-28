@@ -4,6 +4,7 @@ from datetime import datetime
 
 import psycopg2
 import scrapy
+from loguru import logger
 from scrapy.spidermiddlewares.httperror import HttpError
 from scrapy.utils.response import open_in_browser
 from twisted.internet.error import TCPTimedOutError, TimeoutError
@@ -32,14 +33,14 @@ class DocumentDetailSpider(scrapy.Spider):
                     limit=2 if env.CRAWL_DATA_ENV_DEV else 150,
                 )
         except Exception as e:
-            self.logger.error(f"Lỗi khi lấy logic database từ PostgreSQL: {e}")
+            logger.error(f"Lỗi khi lấy logic database từ PostgreSQL: {e}")
             return
         finally:
             if conn:
                 conn.close()
 
         if not pending_item_ids:
-            self.logger.info("🎉 Không còn bản ghi nào cần crawl.")
+            logger.info("🎉 Không còn bản ghi nào cần crawl.")
             return
 
         for item_id in pending_item_ids:
@@ -54,11 +55,11 @@ class DocumentDetailSpider(scrapy.Spider):
 
     def handle_error(self, failure):
         item_id = failure.request.meta.get("item_id")
-        self.logger.error(f"❌ Lỗi Request tại item {item_id}: {repr(failure)}")
+        logger.error(f"❌ Lỗi Request tại item {item_id}: {repr(failure)}")
 
         # Kiểm tra nếu lỗi là do quá hạn 2 phút (Timeout)
         if failure.check(TimeoutError, TCPTimedOutError):
-            self.logger.error(
+            logger.error(
                 "🛑 Website không phản hồi sau 2 phút! Đang hủy bỏ tất cả các URL còn lại..."
             )
             self.crawler.engine.close_spider(self, "server_timeout")
@@ -67,7 +68,7 @@ class DocumentDetailSpider(scrapy.Spider):
         if failure.check(HttpError):
             response = failure.value.response
             if response.status >= 500:
-                self.logger.error(
+                logger.error(
                     f"🛑 Server trả về mã lỗi {response.status}! Đang hủy bỏ tất cả các URL còn lại..."
                 )
                 self.crawler.engine.close_spider(
@@ -85,7 +86,7 @@ class DocumentDetailSpider(scrapy.Spider):
             page_title = response.xpath("//title/text()").get(default="")
 
             if "Error" in page_title and "Sorry, something went wrong" in response.text:
-                self.logger.warning(
+                logger.warning(
                     f"⚠️ Bỏ qua item {item_id} vì trang web báo lỗi hệ thống (Sorry, something went wrong)."
                 )
                 # Dừng toàn bộ chương trình khi gặp dòng chữ này
@@ -98,13 +99,13 @@ class DocumentDetailSpider(scrapy.Spider):
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(response.text)
 
-            self.logger.info(f"✅ Đã lưu detail: {item_id}")
+            logger.info(f"✅ Đã lưu detail: {item_id}")
 
             yield {
                 "update_at": datetime.now().isoformat(),
                 "item_id": item_id,
             }
         else:
-            self.logger.warning(
+            logger.warning(
                 f"❌ Crawl thất bại (Status {response.status}) cho item: {item_id}"
             )
