@@ -7,7 +7,7 @@ from langchain_core.messages import SystemMessage
 from loguru import logger
 
 import env
-from rag import custom_prompt
+from rag import prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import (
@@ -30,7 +30,7 @@ PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 def summarize_with_ollama(text_content, max_retries=3):
     messages = [
         SystemMessage(
-            content=custom_prompt.SUMMARY_SYSTEM_PROMPT.format(document=text_content)
+            content=prompt.SUMMARY_SYSTEM_PROMPT.format(document=text_content)
         )
     ]
     return call_ollama(messages, max_retries=max_retries, stream=True)

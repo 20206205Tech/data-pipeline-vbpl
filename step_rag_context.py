@@ -8,7 +8,7 @@ from langchain_core.messages import SystemMessage
 from loguru import logger
 
 import env
-from rag import custom_prompt
+from rag import prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import (
@@ -31,7 +31,7 @@ PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 def get_context_from_ollama(summary_text, chunk_text, max_retries=3):
     messages = [
         SystemMessage(
-            content=custom_prompt.CONTEXTUALIZER_PROMPT.format(
+            content=prompt.CONTEXTUALIZER_PROMPT.format(
                 summary=summary_text, chunk=chunk_text
             )
         )
