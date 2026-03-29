@@ -20,7 +20,7 @@ def main():
         "AUTOTHROTTLE_TARGET_CONCURRENCY": 1.0,
         "AUTOTHROTTLE_DEBUG": False,
         # --- THÊM CẤU HÌNH TIMEOUT & RETRY TẠI ĐÂY ---
-        "DOWNLOAD_TIMEOUT": 120,  # Chờ tối đa 120 giây (2 phút)
+        "DOWNLOAD_TIMEOUT": 60 * 5,  # Chờ tối đa 5 phút
         "RETRY_ENABLED": False,  # Tắt thử lại để fail ngay sau 2 phút nếu web lỗi
         # ---------------------------------------------
         "DOWNLOADER_MIDDLEWARES": {
