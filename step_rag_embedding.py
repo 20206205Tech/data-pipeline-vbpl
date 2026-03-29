@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from loguru import logger
 
 import env
-from rag import pinecone_index, vectorstore
+from rag.vectorstore import pinecone_index, vectorstore
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import (
     download_from_drive,
