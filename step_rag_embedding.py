@@ -4,14 +4,11 @@ from datetime import datetime
 
 import dlt
 import psycopg2
-import torch
 from langchain_core.documents import Document
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_pinecone import PineconeVectorStore
 from loguru import logger
-from pinecone import Pinecone
 
 import env
+from rag import pinecone_index, vectorstore
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import (
     download_from_drive,
@@ -27,27 +24,6 @@ from utils.workflow_helper import (
 
 config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
-
-if torch.cuda.is_available():
-    current_device = "cuda"
-elif torch.backends.mps.is_available():
-    current_device = "mps"
-else:
-    current_device = "cpu"
-
-embeddings_model = HuggingFaceEmbeddings(
-    model_name="keepitreal/vietnamese-sbert",
-    model_kwargs={"device": current_device},
-    encode_kwargs={"normalize_embeddings": True},
-)
-
-
-pc = Pinecone(api_key=env.PINECONE_API_KEY)
-pinecone_index = pc.Index(env.PINECONE_INDEX_NAME)
-
-vectorstore = PineconeVectorStore(
-    index=pinecone_index, embedding=embeddings_model, text_key="text"
-)
 
 
 @dlt.resource(
