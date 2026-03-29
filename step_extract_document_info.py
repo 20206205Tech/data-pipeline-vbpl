@@ -168,6 +168,7 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
                     logger.warning(
                         f"Bỏ qua {item_id}: Không tìm thấy drive_id trong document_detail."
                     )
+                    error_item_ids.append(item_id)
                     continue
 
                 logger.info(f"Đang xử lý trích xuất info cho: {item_id}")
@@ -196,8 +197,10 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
 
             except ValueError as ve:
                 logger.error(f"LỖI ĐỊNH DẠNG: {ve}")
+                error_item_ids.append(item_id)
             except Exception as e:
                 logger.error(f"Lỗi hệ thống khi xử lý item {item_id}: {e}")
+                error_item_ids.append(item_id)
 
     except Exception as e:
         logger.error(f"Lỗi khi truy vấn lấy dữ liệu từ DB: {e}")
