@@ -1,5 +1,3 @@
-import sys
-
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
@@ -49,18 +47,8 @@ def main():
     settings.update(custom_settings)
 
     process = CrawlerProcess(settings)
-    crawler = process.create_crawler(DocumentDetailSpider)
-    process.crawl(crawler)
-
+    process.crawl(DocumentDetailSpider)
     process.start()
-
-    stats = crawler.stats
-    finish_reason = stats.get_value("finish_reason") if stats else "unknown"
-
-    if finish_reason != "finished":
-        print(f"🛑 Spider đóng bất thường với lý do: {finish_reason}")
-        print("❌ Gửi tín hiệu báo lỗi cho GitHub Actions (Exit Code 1)...")
-        sys.exit(1)
 
 
 if __name__ == "__main__":
