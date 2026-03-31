@@ -112,11 +112,11 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     try:
                         pinecone_index.delete(filter={"item_id": {"$eq": str(item_id)}})
                         logger.success(
-                            f"✅ Đã xóa sạch vector cũ của {item_id} trên Pinecone."
+                            f"✅ Đã xóa vector cũ của {item_id} trên vectorDB."
                         )
                     except Exception as delete_err:
                         logger.error(
-                            f"❌ Lỗi khi xóa vector của {item_id} trên Pinecone: {delete_err}"
+                            f"❌ Lỗi khi xóa vector của {item_id} trên vectorDB: {delete_err}"
                         )
                         error_item_ids.append(item_id)
                         continue
@@ -246,7 +246,6 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                 error_item_ids.append(item_id)
 
             finally:
-                # Dọn dẹp an toàn: Dù thành công hay lỗi, luôn xoá sạch folder tạm
                 if os.path.exists(item_workspace):
                     shutil.rmtree(item_workspace, ignore_errors=True)
 
