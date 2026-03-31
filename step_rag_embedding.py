@@ -50,9 +50,30 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có tài liệu nào cần xử lý embedding.")
             return
 
-        dict_statuses = get_existing_drive_ids_from_db(
-            conn, "document_info", pending_item_ids, "status"
+        logger.info(
+            f"Đang fetch toàn bộ metadata và history hàng loạt cho {len(pending_item_ids)} items..."
         )
+
+        dict_all_info = {}
+        str_item_ids = tuple(str(id) for id in pending_item_ids)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT item_id, status, effective_date, issuing_agency, document_number, issue_date, title, signer, position
+                    FROM "public"."document_info"
+                    WHERE item_id IN %s
+                    """,
+                    (str_item_ids,),
+                )
+                columns = [desc[0] for desc in cur.description]
+                for row in cur.fetchall():
+                    dict_all_info[str(row[0])] = dict(zip(columns, row))
+        except psycopg2.errors.UndefinedTable:
+            conn.rollback()
+        except Exception as e:
+            logger.error(f"Lỗi khi fetch document_info: {e}")
+            conn.rollback()
 
         dict_context_drive_ids = get_existing_drive_ids_from_db(
             conn, "document_context", pending_item_ids, "drive_id"
@@ -68,7 +89,8 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
             )
 
             try:
-                raw_status = dict_statuses.get(str(item_id))
+                info_record = dict_all_info.get(str(item_id), {})
+                raw_status = info_record.get("status")
 
                 safe_status = (
                     raw_status.strip()
@@ -162,6 +184,26 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                 documents = []
                 doc_ids = []
 
+                base_metadata = {
+                    "item_id": str(item_id),
+                    "legal_status": safe_status,
+                }
+
+                keys_to_add = [
+                    "title",
+                    "document_number",
+                    "issuing_agency",
+                    "issue_date",
+                    "effective_date",
+                    "signer",
+                    "position",
+                ]
+
+                for key in keys_to_add:
+                    val = info_record.get(key)
+                    if val:
+                        base_metadata[key] = str(val).strip()
+
                 for chunk_filename in chunk_files:
                     with open(
                         os.path.join(extract_dir, chunk_filename), "r", encoding="utf-8"
@@ -170,17 +212,16 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     if not text:
                         continue
 
+                    chunk_metadata = base_metadata.copy()
+                    chunk_metadata["source"] = chunk_filename
+
                     # ID đồng bộ để ghi đè (upsert) tránh trùng lặp trong vector DB
                     doc_id = f"{item_id}_{chunk_filename.replace('.md', '')}"
 
                     documents.append(
                         Document(
                             page_content=text,
-                            metadata={
-                                "item_id": str(item_id),
-                                "source": chunk_filename,
-                                "legal_status": safe_status,
-                            },
+                            metadata=chunk_metadata,
                         )
                     )
                     doc_ids.append(doc_id)
