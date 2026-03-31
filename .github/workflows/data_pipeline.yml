@@ -128,13 +128,13 @@ jobs:
         run: |
           doppler run -p 20206205tech -c prd -- uv run python step_rag_context.py
 
-      - name: step_call_colab
-        if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.step_rag_context == true }}
-        # if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.step_call_colab == true }}
-        env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-        run: |
-          doppler run -p 20206205tech -c prd -- uv run python step_call_colab.py
+      # - name: step_call_colab
+      #   if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.step_rag_context == true }}
+      #   # if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.step_call_colab == true }}
+      #   env:
+      #     DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+      #   run: |
+      #     doppler run -p 20206205tech -c prd -- uv run python step_call_colab.py
 
       - name: step_rag_embedding
         if: ${{ github.event_name == 'workflow_dispatch' || github.event.client_payload.steps_config.step_rag_embedding == true }}
