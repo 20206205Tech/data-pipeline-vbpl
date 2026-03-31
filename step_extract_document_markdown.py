@@ -74,14 +74,13 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
 
                 if not drive_content_file_id:
                     logger.warning(
-                        f"Không tìm thấy drive_id nội dung html clean cho {item_id}"
+                        f"Không tìm thấy drive_id nội dung html cho {item_id}"
                     )
                     error_item_ids.append(item_id)
                     continue
 
                 logger.info(f"Đang xử lý Markdown cho item: {item_id}")
 
-                # 2. Tải HTML clean về và convert sang Markdown
                 html_bytes = download_from_drive(drive_service, drive_content_file_id)
                 html_text = html_bytes.decode("utf-8")
 

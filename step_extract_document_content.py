@@ -95,12 +95,10 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 3. Ghi file nội dung clean ra thư mục local TRƯỚC
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(clean_html)
                 logger.info(f"💾 Đã lưu file clean tại: {file_path}")
 
-                # 4. Tính toán MD5 của file clean vừa lưu
                 local_clean_md5 = calculate_file_md5(file_path)
 
                 if not local_clean_md5:
@@ -114,26 +112,22 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                         drive_service, old_clean_drive_id
                     )
 
-                    # THÀNH CÔNG 1: Nội dung clean không thay đổi
                     if drive_clean_md5 == local_clean_md5:
                         logger.info(
-                            f"⏭️ Bỏ qua {item_id} vì nội dung clean không đổi trên Drive."
+                            f"⏭️ Bỏ qua {item_id} vì nội dung không đổi trên Drive."
                         )
                         success_item_ids.append(item_id)
                         continue
 
-                # 6. Upload file clean lên thư mục Drive MỚI
                 new_clean_drive_id = upload_to_drive(
                     drive_service, file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
                 )
 
-                # LỖI: Upload file clean thất bại
                 if not new_clean_drive_id:
                     logger.error(f"❌ Upload file clean thất bại cho {item_id}")
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG 2: Upload file clean mới thành công -> Yield
                 logger.success(
                     f"✅ Đã upload file clean {item_id} (Drive ID: {new_clean_drive_id})"
                 )
