@@ -8,8 +8,15 @@ from loguru import logger
 
 import env
 from utils.config_by_path import ConfigByPath
-from utils.google_drive import download_from_drive, get_drive_service
-from utils.hash_helper import get_existing_drive_ids_from_db
+from utils.google_drive import (
+    download_from_drive,
+    get_drive_file_md5,
+    get_drive_service,
+)
+from utils.hash_helper import (
+    get_existing_drive_ids_from_db,
+    get_existing_hashes_from_db,
+)
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -162,6 +169,10 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
             conn, "document_detail", pending_item_ids, "drive_id"
         )
 
+        dict_old_hashes = get_existing_hashes_from_db(
+            conn, "document_info", pending_item_ids, "html_md5", "item_id"
+        )
+
         for item_id in pending_item_ids:
             try:
                 drive_id = dict_drive_ids.get(str(item_id))
@@ -171,6 +182,24 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
                         f"Bỏ qua {item_id}: Không tìm thấy drive_id trong document_detail."
                     )
                     error_item_ids.append(item_id)
+                    continue
+
+                current_html_md5 = get_drive_file_md5(drive_service, drive_id)
+
+                if not current_html_md5:
+                    logger.warning(
+                        f"⚠️ Không lấy được MD5 từ Drive cho file HTML của {item_id}"
+                    )
+                    error_item_ids.append(item_id)
+                    continue
+
+                old_html_md5, _ = dict_old_hashes.get(str(item_id), (None, None))
+
+                if old_html_md5 == current_html_md5:
+                    logger.info(
+                        f"⏭️ Bỏ qua {item_id}: Nội dung HTML không đổi trên Drive, không cần trích xuất lại info."
+                    )
+                    success_item_ids.append(item_id)
                     continue
 
                 logger.info(f"Đang xử lý trích xuất info cho: {item_id}")
@@ -192,6 +221,9 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
 
                 if metadata:
                     metadata["update_at"] = datetime.now().isoformat()
+
+                    metadata["html_md5"] = current_html_md5
+
                     success_item_ids.append(item_id)
                     yield metadata
                 else:
@@ -238,8 +270,6 @@ def main():
         logger.warning(f"Danh sách lỗi: {error_item_ids}")
 
         log_error_workflow_state(pipeline, error_item_ids, start_time)
-
-    # get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":
