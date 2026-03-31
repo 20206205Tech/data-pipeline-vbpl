@@ -9,7 +9,7 @@ import env
 from output_document_detail import PATH_FILE_OUTPUT, PATH_FOLDER_OUTPUT
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import get_drive_file_md5, get_drive_service, upload_to_drive
-from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
+from utils.hash_helper import calculate_file_md5, get_existing_drive_ids_from_db
 from utils.jsonl_helper import yield_jsonl_records
 from utils.workflow_helper import log_error_workflow_state, log_workflow_state
 
@@ -27,12 +27,24 @@ def document_detail_resource(success_item_ids, error_item_ids):
         drive_service = get_drive_service()
         conn = psycopg2.connect(env.DATA_PIPELINE_VBPL_DATABASE_URL)
 
-        with open(PATH_FILE_OUTPUT, "r", encoding="utf-8") as f:
-            total_lines = sum(1 for _ in f)
+        records = list(yield_jsonl_records(PATH_FILE_OUTPUT))
+        logger.info(f"Tổng số dòng cần xử lý từ file JSONL: {len(records)}")
 
-        logger.info(f"Tổng số dòng cần xử lý: {total_lines}")
+        if not records:
+            logger.info("🎉 Không có dữ liệu để xử lý.")
+            return
 
-        for record in yield_jsonl_records(PATH_FILE_OUTPUT):
+        all_item_ids = [r.get("item_id") for r in records if r.get("item_id")]
+
+        if not all_item_ids:
+            logger.warning("Không tìm thấy item_id nào hợp lệ trong các records.")
+            return
+
+        dict_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_detail", all_item_ids, "drive_id"
+        )
+
+        for record in records:
             item_id = record.get("item_id")
 
             if not item_id:
@@ -54,10 +66,7 @@ def document_detail_resource(success_item_ids, error_item_ids):
                 error_item_ids.append(item_id)
                 continue
 
-            # 2. Lấy drive_id cũ từ DB
-            drive_id = get_existing_drive_id_from_db(
-                conn, "document_detail", item_id, "drive_id"
-            )
+            drive_id = dict_drive_ids.get(str(item_id))
 
             # 3. Nếu DB đã có drive_id, gọi API Drive để lấy MD5 về so sánh
             if drive_id:

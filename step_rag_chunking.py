@@ -18,7 +18,10 @@ from utils.google_drive import (
     get_drive_service,
     upload_to_drive,
 )
-from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
+from utils.hash_helper import (
+    get_existing_drive_ids_from_db,
+    get_existing_hashes_from_db,
+)
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -119,21 +122,27 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có tài liệu Markdown nào cần phân mảnh.")
             return
 
+        dict_md_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_markdown", pending_item_ids, "drive_id"
+        )
+
+        dict_summary_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_summary", pending_item_ids, "drive_id"
+        )
+
+        dict_chunk_hashes = get_existing_hashes_from_db(
+            conn, "document_chunking", pending_item_ids, "md_hash", "drive_id"
+        )
+
         for item_id in pending_item_ids:
             item_folder = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_{item_id}")
             zip_base_path = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_zip_{item_id}")
             zip_file_path = f"{zip_base_path}.zip"
 
             try:
-                # 1. Lấy drive_id của file Markdown từ DB
-                md_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_markdown", item_id, "drive_id"
-                )
+                md_drive_id = dict_md_drive_ids.get(str(item_id))
 
-                # 2. Lấy drive_id của file Summary từ DB
-                summary_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_summary", item_id, "drive_id"
-                )
+                summary_drive_id = dict_summary_drive_ids.get(str(item_id))
 
                 if not md_drive_id or not summary_drive_id:
                     logger.warning(
@@ -152,10 +161,7 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 4. Truy vấn lịch sử xử lý Chunking (lấy md_hash cũ)
-                old_md_hash, _ = get_existing_hash_from_db(
-                    conn, "document_chunking", item_id, "md_hash", "drive_id"
-                )
+                old_md_hash, _ = dict_chunk_hashes.get(str(item_id), (None, None))
 
                 # 5. TRẠM GÁC: Bỏ qua nếu Markdown không thay đổi
                 if old_md_hash == current_md_md5:

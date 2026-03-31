@@ -14,7 +14,7 @@ from utils.google_drive import (
     get_drive_service,
     upload_to_drive,
 )
-from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
+from utils.hash_helper import calculate_file_md5, get_existing_drive_ids_from_db
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -58,17 +58,25 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có dữ liệu mới cần trích xuất nội dung.")
             return
 
+        dict_raw_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_detail", pending_item_ids, "drive_id"
+        )
+
+        dict_old_clean_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_content", pending_item_ids, "drive_id"
+        )
+
         for item_id in pending_item_ids:
             file_name = f"{item_id}.html"
             file_path = os.path.join(PATH_FOLDER_OUTPUT, file_name)
 
             try:
-                raw_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_detail", item_id, "drive_id"
-                )
+                raw_drive_id = dict_raw_drive_ids.get(str(item_id))
 
                 if not raw_drive_id:
-                    logger.warning(f"Bỏ qua {item_id}: Không thấy drive_id")
+                    logger.warning(
+                        f"Bỏ qua {item_id}: Không thấy drive_id trong bảng document_detail"
+                    )
                     error_item_ids.append(item_id)
                     continue
 
@@ -99,10 +107,7 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 5. Kiểm tra xem đã có bản clean trên Drive chưa (từ bảng document_content)
-                old_clean_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_content", item_id, "drive_id"
-                )
+                old_clean_drive_id = dict_old_clean_drive_ids.get(str(item_id))
 
                 if old_clean_drive_id:
                     drive_clean_md5 = get_drive_file_md5(
@@ -128,7 +133,7 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # THÀNH CÔNG 2: Upload file clean mới thành công -> Yield (Bỏ trường file_hash)
+                # THÀNH CÔNG 2: Upload file clean mới thành công -> Yield
                 logger.success(
                     f"✅ Đã upload file clean {item_id} (Drive ID: {new_clean_drive_id})"
                 )
@@ -145,7 +150,7 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                 error_item_ids.append(item_id)
 
     except Exception as e:
-        logger.error(f"Lỗi khi truy vấn DB: {e}")
+        logger.error(f"Lỗi khi truy vấn DB/Google Drive: {e}")
     finally:
         if conn:
             conn.close()

@@ -16,7 +16,10 @@ from utils.google_drive import (
     get_drive_service,
     upload_to_drive,
 )
-from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
+from utils.hash_helper import (
+    get_existing_drive_ids_from_db,
+    get_existing_hashes_from_db,
+)
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -57,12 +60,17 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có tài liệu nào cần tóm tắt.")
             return
 
+        dict_md_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_markdown", pending_item_ids, "drive_id"
+        )
+
+        dict_summary_hashes = get_existing_hashes_from_db(
+            conn, "document_summary", pending_item_ids, "md_hash", "drive_id"
+        )
+
         for item_id in pending_item_ids:
             try:
-                # 1. Lấy Drive ID của file Markdown từ bảng document_markdown
-                md_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_markdown", item_id, "drive_id"
-                )
+                md_drive_id = dict_md_drive_ids.get(str(item_id))
 
                 if not md_drive_id:
                     logger.warning(
@@ -81,10 +89,7 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 3. Lấy Hash Markdown lịch sử từ bảng document_summary
-                old_md_hash, _ = get_existing_hash_from_db(
-                    conn, "document_summary", item_id, "md_hash", "drive_id"
-                )
+                old_md_hash, _ = dict_summary_hashes.get(str(item_id), (None, None))
 
                 # 4. TRẠM GÁC: Skip hoàn toàn nếu Markdown không thay đổi
                 if old_md_hash == current_md_md5:

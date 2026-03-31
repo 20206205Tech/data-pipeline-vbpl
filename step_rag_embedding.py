@@ -15,7 +15,10 @@ from utils.google_drive import (
     get_drive_file_md5,
     get_drive_service,
 )
-from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
+from utils.hash_helper import (
+    get_existing_drive_ids_from_db,
+    get_existing_hashes_from_db,
+)
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -47,19 +50,25 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có tài liệu nào cần xử lý embedding.")
             return
 
+        dict_statuses = get_existing_drive_ids_from_db(
+            conn, "document_info", pending_item_ids, "status"
+        )
+
+        dict_context_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_context", pending_item_ids, "drive_id"
+        )
+
+        dict_embedding_hashes = get_existing_hashes_from_db(
+            conn, "document_embedding", pending_item_ids, "context_md5", "status"
+        )
+
         for item_id in pending_item_ids:
             item_workspace = os.path.join(
                 PATH_FOLDER_OUTPUT, f"embed_workspace_{item_id}"
             )
 
             try:
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT status FROM document_info WHERE item_id = %s",
-                        (item_id,),
-                    )
-                    status_row = cursor.fetchone()
-                    raw_status = status_row[0] if status_row else None
+                raw_status = dict_statuses.get(str(item_id))
 
                 safe_status = (
                     raw_status.strip()
@@ -100,9 +109,7 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     }
                     continue
 
-                context_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_context", item_id, "drive_id"
-                )
+                context_drive_id = dict_context_drive_ids.get(str(item_id))
 
                 if not context_drive_id:
                     logger.warning(
@@ -122,8 +129,8 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                old_context_md5, _ = get_existing_hash_from_db(
-                    conn, "document_embedding", item_id, "context_md5", "status"
+                old_context_md5, _ = dict_embedding_hashes.get(
+                    str(item_id), (None, None)
                 )
 
                 if old_context_md5 == current_context_md5:

@@ -9,7 +9,7 @@ from loguru import logger
 import env
 from utils.config_by_path import ConfigByPath
 from utils.google_drive import download_from_drive, get_drive_service
-from utils.hash_helper import get_existing_drive_id_from_db
+from utils.hash_helper import get_existing_drive_ids_from_db
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -158,11 +158,13 @@ def document_info_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có dữ liệu mới cần trích xuất thông tin.")
             return
 
+        dict_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_detail", pending_item_ids, "drive_id"
+        )
+
         for item_id in pending_item_ids:
             try:
-                drive_id = get_existing_drive_id_from_db(
-                    conn, "document_detail", item_id, "drive_id"
-                )
+                drive_id = dict_drive_ids.get(str(item_id))
 
                 if not drive_id:
                     logger.warning(
@@ -221,7 +223,6 @@ def main():
     start_time = datetime.now()
 
     pipeline.run(document_info_resource(success_item_ids, error_item_ids))
-    # logger.info(f"Kết quả pipeline: {info}")
 
     if success_item_ids:
         log_workflow_state(

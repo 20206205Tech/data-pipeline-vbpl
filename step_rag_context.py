@@ -17,7 +17,10 @@ from utils.google_drive import (
     get_drive_service,
     upload_to_drive,
 )
-from utils.hash_helper import get_existing_drive_id_from_db, get_existing_hash_from_db
+from utils.hash_helper import (
+    get_existing_drive_ids_from_db,
+    get_existing_hashes_from_db,
+)
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -64,6 +67,18 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có tài liệu nào cần tạo ngữ cảnh (contextualizing).")
             return
 
+        dict_summary_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_summary", pending_item_ids, "drive_id"
+        )
+
+        dict_chunk_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_chunking", pending_item_ids, "drive_id"
+        )
+
+        dict_context_hashes = get_existing_hashes_from_db(
+            conn, "document_context", pending_item_ids, "summary_md5", "chunk_md5"
+        )
+
         for item_id in pending_item_ids:
             item_workspace = os.path.join(PATH_FOLDER_OUTPUT, f"workspace_{item_id}")
             zip_base_output_path = os.path.join(
@@ -72,13 +87,8 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
             final_zip_path = f"{zip_base_output_path}.zip"
 
             try:
-                # 1. Lấy Drive ID của Summary & Chunks từ Database
-                summary_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_summary", item_id, "drive_id"
-                )
-                chunk_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_chunking", item_id, "drive_id"
-                )
+                summary_drive_id = dict_summary_drive_ids.get(str(item_id))
+                chunk_drive_id = dict_chunk_drive_ids.get(str(item_id))
 
                 if not summary_drive_id or not chunk_drive_id:
                     logger.warning(
@@ -100,9 +110,8 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 3. Truy vấn lịch sử từ bảng document_context (lấy MD5 cũ)
-                old_summary_md5, old_chunk_md5 = get_existing_hash_from_db(
-                    conn, "document_context", item_id, "summary_md5", "chunk_md5"
+                old_summary_md5, old_chunk_md5 = dict_context_hashes.get(
+                    str(item_id), (None, None)
                 )
 
                 # 4. TRẠM GÁC: Skip nếu cả Tóm tắt và Chunks đều không có thay đổi

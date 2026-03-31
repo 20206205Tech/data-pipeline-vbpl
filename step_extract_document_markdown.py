@@ -14,7 +14,7 @@ from utils.google_drive import (
     get_drive_service,
     upload_to_drive,
 )
-from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
+from utils.hash_helper import calculate_file_md5, get_existing_drive_ids_from_db
 from utils.workflow_helper import (
     fetch_and_lock_pending_tasks,
     log_error_workflow_state,
@@ -57,15 +57,20 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
             logger.info("🎉 Không có dữ liệu Markdown mới cần xử lý.")
             return
 
+        dict_content_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_content", pending_item_ids, "drive_id"
+        )
+
+        dict_markdown_drive_ids = get_existing_drive_ids_from_db(
+            conn, "document_markdown", pending_item_ids, "drive_id"
+        )
+
         for item_id in pending_item_ids:
             file_name = f"{item_id}.md"
             file_path = os.path.join(PATH_FOLDER_OUTPUT, file_name)
 
             try:
-                # 1. Lấy drive_id của nội dung html đã clean từ bảng document_content
-                drive_content_file_id = get_existing_drive_id_from_db(
-                    conn, "document_content", item_id, "drive_id"
-                )
+                drive_content_file_id = dict_content_drive_ids.get(str(item_id))
 
                 if not drive_content_file_id:
                     logger.warning(
@@ -99,10 +104,7 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)
                     continue
 
-                # 5. Kiểm tra xem đã có bản Markdown trên Drive chưa (từ bảng document_markdown)
-                old_markdown_drive_id = get_existing_drive_id_from_db(
-                    conn, "document_markdown", item_id, "drive_id"
-                )
+                old_markdown_drive_id = dict_markdown_drive_ids.get(str(item_id))
 
                 if old_markdown_drive_id:
                     # Gọi API lấy MD5 của file trên Drive về
@@ -126,7 +128,7 @@ def document_markdown_resource(success_item_ids: list, error_item_ids: list):
                     error_item_ids.append(item_id)  # Ghi nhận lỗi
                     continue
 
-                # 7. THÀNH CÔNG 2: Upload mới thành công -> Yield (Bỏ trường file_hash)
+                # 7. THÀNH CÔNG 2: Upload mới thành công -> Yield
                 logger.success(
                     f"✅ Đã upload Markdown cho {item_id} (Drive ID: {new_drive_id})"
                 )
@@ -179,8 +181,6 @@ def main():
         logger.warning(f"Danh sách lỗi: {error_item_ids}")
 
         log_error_workflow_state(pipeline, error_item_ids, start_time)
-
-    # get_workflow_item_counts_via_pipeline(pipeline)
 
 
 if __name__ == "__main__":
