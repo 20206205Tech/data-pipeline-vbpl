@@ -16,8 +16,8 @@ from utils.google_drive import (
 )
 from utils.hash_helper import calculate_file_md5, get_existing_drive_id_from_db
 from utils.workflow_helper import (
-    document_state_resource,
     fetch_and_lock_pending_tasks,
+    log_error_workflow_state,
     log_workflow_state,
 )
 
@@ -178,14 +178,7 @@ def main():
         logger.error(f"Có {len(error_item_ids)} items gặp lỗi và cần thu thập lại.")
         logger.warning(f"Danh sách lỗi: {error_item_ids}")
 
-        pipeline.run(
-            document_state_resource(
-                workflow_id=0,
-                item_ids=error_item_ids,
-                start_time=start_time,
-                end_time=datetime.now(),
-            )
-        )
+        log_error_workflow_state(pipeline, error_item_ids, start_time)
 
     # get_workflow_item_counts_via_pipeline(pipeline)
 

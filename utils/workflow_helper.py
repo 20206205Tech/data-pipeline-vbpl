@@ -127,7 +127,8 @@ def fetch_and_lock_pending_tasks(conn, step_code: str, limit: int = None) -> lis
         SELECT ds.item_id
         FROM "public"."document_state" ds
         WHERE ds.workflow_id = (SELECT parent_id FROM step_info)
-          AND ds.end_time IS NOT NULL
+            AND ds.end_time IS NOT NULL
+        ORDER BY ds.end_time ASC
         {limit_clause}
         FOR UPDATE SKIP LOCKED
     )
@@ -206,3 +207,29 @@ def get_workflow_item_counts_via_pipeline(
     except Exception as e:
         logger.error(f"Lỗi database khi lấy thống kê workflow: {e}")
         raise
+
+
+def log_error_workflow_state(
+    pipeline: dlt.Pipeline,
+    error_item_ids: list,
+    start_time: datetime,
+    # fallback_workflow_id: int = workflow_config.STEP_LOAD_DOCUMENT_LIST.id
+    fallback_workflow_id: int = 0,
+):
+    if not error_item_ids:
+        return
+
+    try:
+        pipeline.run(
+            document_state_resource(
+                workflow_id=fallback_workflow_id,
+                item_ids=error_item_ids,
+                start_time=start_time,
+                end_time=datetime.now(),
+            )
+        )
+        logger.info(
+            f"🔄 Đã cập nhật state cho {len(error_item_ids)} items lỗi (Revert về workflow_id={fallback_workflow_id})."
+        )
+    except Exception as e:
+        logger.error(f"❌ Lỗi khi ghi state cho items lỗi: {e}")

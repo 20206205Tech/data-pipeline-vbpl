@@ -6,8 +6,8 @@ from loguru import logger
 
 from utils.config_by_path import ConfigByPath
 from utils.workflow_helper import (
-    document_state_resource,
     get_workflow_item_counts_via_pipeline,
+    log_error_workflow_state,
 )
 
 config_by_path = ConfigByPath(__file__)
@@ -55,14 +55,7 @@ def main():
         # Lưu lại start_time của tiến trình cập nhật này
         start_time = datetime.now()
 
-        pipeline.run(
-            document_state_resource(
-                workflow_id=0,
-                item_ids=error_item_ids,
-                start_time=start_time,
-                end_time=datetime.now(),
-            )
-        )
+        log_error_workflow_state(pipeline, error_item_ids, start_time)
     else:
         logger.info("Không có document nào bị treo.")
 
