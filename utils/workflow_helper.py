@@ -213,8 +213,8 @@ def log_error_workflow_state(
     pipeline: dlt.Pipeline,
     error_item_ids: list,
     start_time: datetime,
-    # fallback_workflow_id: int = workflow_config.STEP_LOAD_DOCUMENT_LIST.id
-    fallback_workflow_id: int = 0,
+    fallback_workflow_id: int = workflow_config.STEP_LOAD_DOCUMENT_LIST.id
+    # fallback_workflow_id: int = 0,
 ):
     if not error_item_ids:
         return
