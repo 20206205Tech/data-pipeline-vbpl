@@ -51,7 +51,7 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=1000,
+            limit=300,
         )
 
         if not pending_item_ids:
@@ -68,7 +68,7 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                 )
 
                 if not raw_drive_id:
-                    logger.warning(f"Bỏ qua {item_id}: Không tìm thấy drive_id gốc.")
+                    logger.warning(f"Bỏ qua {item_id}: Không thấy drive_id")
                     error_item_ids.append(item_id)
                     continue
 
@@ -175,7 +175,7 @@ def main():
         logger.info(f"Đã xử lý thành công {len(success_item_ids)} items.")
 
     if error_item_ids:
-        logger.error(f"Có {len(error_item_ids)} items gặp lỗi và cần thu thập lại.")
+        logger.error(f"Có {len(error_item_ids)} items lỗi, cần thu thập lại.")
         logger.warning(f"Danh sách lỗi: {error_item_ids}")
 
         pipeline.run(
