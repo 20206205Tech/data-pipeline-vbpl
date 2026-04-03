@@ -53,7 +53,7 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=10,
+            limit=50,
         )
 
         if not pending_item_ids:
