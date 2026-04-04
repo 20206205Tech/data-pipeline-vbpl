@@ -61,8 +61,8 @@ OLLAMA_URL = "https://colab.20206205.tech"
 WEBHOOK_OLLAMA_URL = "https://webhook.20206205.tech/send-data"
 
 
-print("*" * 100)
-for key, value in list(globals().items()):
-    if key.isupper():
-        logger.info(f"{key}: ***")
-print("*" * 100)
+# print("*" * 100)
+# for key, value in list(globals().items()):
+#     if key.isupper():
+#         logger.info(f"{key}: ***")
+# print("*" * 100)
