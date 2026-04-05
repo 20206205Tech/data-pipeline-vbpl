@@ -31,7 +31,6 @@ class DocumentDetailSpider(scrapy.Spider):
                     conn=conn,
                     step_code="step_crawl_document_detail",
                     limit=2 if env.CRAWL_DATA_ENV_DEV else 500,
-                    # limit=2 if env.CRAWL_DATA_ENV_DEV else 1000,
                 )
         except Exception as e:
             logger.error(f"Lỗi khi lấy logic database từ PostgreSQL: {e}")
