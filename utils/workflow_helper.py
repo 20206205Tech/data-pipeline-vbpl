@@ -200,7 +200,7 @@ def get_workflow_item_counts_via_pipeline(
             plt.show()
 
             for workflow_id, count in results:
-                logger.debug(f"Workflow ID: {workflow_id}, Item Count: {count}")
+                logger.debug(f"ID: {workflow_id}, Count: {count}")
 
             return results
 
