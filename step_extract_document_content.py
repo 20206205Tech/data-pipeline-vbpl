@@ -178,8 +178,6 @@ def main():
 
         log_error_workflow_state(pipeline, error_item_ids, start_time)
 
-    # get_workflow_item_counts_via_pipeline(pipeline)
-
 
 if __name__ == "__main__":
     main()

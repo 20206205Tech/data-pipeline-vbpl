@@ -150,7 +150,7 @@ def fetch_and_lock_pending_tasks(conn, step_code: str, limit: int = None) -> lis
         return locked_items
 
 
-def get_workflow_item_counts_via_pipeline(
+def get_workflow_item_count(
     pipeline: dlt.Pipeline,
 ) -> List[Tuple[int, int]]:
     query = """

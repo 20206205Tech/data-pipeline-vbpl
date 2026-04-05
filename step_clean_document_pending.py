@@ -5,10 +5,7 @@ import dlt
 from loguru import logger
 
 from utils.config_by_path import ConfigByPath
-from utils.workflow_helper import (
-    get_workflow_item_counts_via_pipeline,
-    log_error_workflow_state,
-)
+from utils.workflow_helper import get_workflow_item_count, log_error_workflow_state
 
 config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
@@ -59,7 +56,7 @@ def main():
     else:
         logger.info("Không có document nào bị treo.")
 
-    get_workflow_item_counts_via_pipeline(pipeline)
+    get_workflow_item_count(pipeline)
 
 
 if __name__ == "__main__":
