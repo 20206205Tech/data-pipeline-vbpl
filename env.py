@@ -10,7 +10,7 @@ from loguru import logger
 
 
 env = Env()
-logger.info(f"Loading environment variables...")
+logger.info("Loading environment variables...")
 
 
 PATH_FILE_ENV = os.path.abspath(__file__)
@@ -69,3 +69,10 @@ WEBHOOK_OLLAMA_URL = "https://webhook.20206205.tech/send-data"
 #     if key.isupper():
 #         logger.info(f"{key}: ***")
 # print("*" * 100)
+
+
+NVIDIA_API_KEY = env.str("NVIDIA_API_KEY")
+
+
+CLOUDFLARE_ACCOUNT_ID = env.str("CLOUDFLARE_ACCOUNT_ID")
+CLOUDFLARE_API_TOKEN = env.str("CLOUDFLARE_API_TOKEN")

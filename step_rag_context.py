@@ -9,7 +9,7 @@ from loguru import logger
 
 import env
 from rag import prompt
-from rag.ollama_client import call_ollama
+from rag.llm import invoke_llm_chain
 from utils.config_by_path import ConfigByPath
 from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
@@ -32,7 +32,8 @@ config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 
 
-def get_context_from_ollama(summary_text, chunk_text, max_retries=3):
+def generate_chunk_context(summary_text, chunk_text):
+    """Sinh ngữ cảnh dẫn nhập cho từng chunk"""
     messages = [
         SystemMessage(
             content=prompt.CONTEXTUALIZER_PROMPT.format(
@@ -40,7 +41,7 @@ def get_context_from_ollama(summary_text, chunk_text, max_retries=3):
             )
         )
     ]
-    return call_ollama(messages, max_retries=max_retries, stream=True)
+    return invoke_llm_chain(messages)
 
 
 @dlt.resource(
@@ -158,12 +159,13 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
 
                 shutil.unpack_archive(zip_local_path, extract_dir)
 
-                # 7. Duyệt qua từng chunk và tạo Context bằng Ollama
+                # 7. Duyệt qua từng chunk và tạo Context bằng LLM Fallback
                 chunk_files = [f for f in os.listdir(extract_dir) if f.endswith(".md")]
                 logger.info(
                     f"🔍 Bắt đầu tạo ngữ cảnh cho {len(chunk_files)} đoạn (chunks)..."
                 )
 
+                item_has_error = False
                 for chunk_filename in chunk_files:
                     raw_chunk_path = os.path.join(extract_dir, chunk_filename)
                     contextualized_chunk_path = os.path.join(
@@ -176,23 +178,28 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
                     if not chunk_content:
                         continue
 
-                    # Gọi AI tạo ngữ cảnh
                     logger.info(f"⏳ Đang sinh ngữ cảnh cho {chunk_filename}...")
-                    ai_context = get_context_from_ollama(summary_text, chunk_content)
+                    ai_context = generate_chunk_context(summary_text, chunk_content)
 
-                    # Trộn ngữ cảnh vào đầu đoạn văn
                     if ai_context:
                         final_chunk_content = f"BỐI CẢNH (CONTEXT):\n{ai_context}\n\nNỘI DUNG (CONTENT):\n{chunk_content}"
+                        with open(
+                            contextualized_chunk_path, "w", encoding="utf-8"
+                        ) as f:
+                            f.write(final_chunk_content)
                     else:
-                        logger.warning(
-                            f"⚠️ Tạo ngữ cảnh thất bại cho {chunk_filename}, giữ nguyên nội dung gốc."
+                        # 🚨 QUAN TRỌNG: Nếu LLM trả về None (tất cả provider đều lỗi)
+                        logger.error(
+                            f"❌ Thất bại hoàn toàn khi tạo ngữ cảnh cho {chunk_filename} của item {item_id}"
                         )
-                        final_chunk_content = chunk_content
+                        item_has_error = True
+                        break  # Dừng xử lý các chunk còn lại của item này
 
-                    with open(contextualized_chunk_path, "w", encoding="utf-8") as f:
-                        f.write(final_chunk_content)
+                if item_has_error:
+                    error_item_ids.append(item_id)
+                    continue  # Chuyển sang item tiếp theo trong pending_item_ids
 
-                # 8. Đóng gói thư mục contextualized thành file ZIP mới
+                # 8. Chỉ đóng gói ZIP nếu tất cả chunk của item đó thành công
                 shutil.make_archive(zip_base_output_path, "zip", contextualized_dir)
 
                 # 9. Upload ZIP lên Google Drive

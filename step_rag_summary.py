@@ -8,7 +8,7 @@ from loguru import logger
 
 import env
 from rag import prompt
-from rag.ollama_client import call_ollama
+from rag.llm import invoke_llm_chain
 from utils.config_by_path import ConfigByPath
 from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
@@ -31,13 +31,13 @@ config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 
 
-def summarize_with_ollama(text_content, max_retries=3):
+def generate_document_summary(text_content):
     messages = [
         SystemMessage(
             content=prompt.SUMMARY_SYSTEM_PROMPT.format(document=text_content)
         )
     ]
-    return call_ollama(messages, max_retries=max_retries, stream=True)
+    return invoke_llm_chain(messages)
 
 
 @dlt.resource(
@@ -110,15 +110,13 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
                     success_item_ids.append(item_id)
                     continue
 
-                # 5. TIẾN HÀNH: Tải file Markdown và gọi Ollama
                 logger.info(f"📝 Đang tải và tóm tắt tài liệu: {item_id}")
                 md_bytes = download_from_drive(drive_service, md_drive_id)
                 md_text = md_bytes.decode("utf-8")
 
-                summary_text = summarize_with_ollama(md_text)
-
+                summary_text = generate_document_summary(md_text)
                 if not summary_text:
-                    logger.error(f"❌ LLM không trả về kết quả tóm tắt cho {item_id}")
+                    logger.error(f"❌ LLM không trả về kết quả cho {item_id}")
                     error_item_ids.append(item_id)
                     continue
 

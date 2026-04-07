@@ -10,7 +10,7 @@ from loguru import logger
 
 import env
 from rag import prompt
-from rag.ollama_client import call_ollama
+from rag.llm import invoke_llm_chain
 from utils.config_by_path import ConfigByPath
 from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
@@ -33,7 +33,7 @@ config_by_path = ConfigByPath(__file__)
 PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 
 
-def get_chunking_suggestions_ollama(summary_text, chunked_text, max_retries=3):
+def get_semantic_split_suggestions(summary_text, chunked_text):
     messages = [
         SystemMessage(
             content=prompt.CHUNKING_PROMPT.format(
@@ -41,7 +41,7 @@ def get_chunking_suggestions_ollama(summary_text, chunked_text, max_retries=3):
             )
         )
     ]
-    return call_ollama(messages, max_retries=max_retries, stream=True)
+    return invoke_llm_chain(messages)
 
 
 def split_text_by_llm_suggestions(chunked_text, llm_response):
@@ -88,18 +88,15 @@ def process_and_chunk(summary_text, md_text):
         processed_chunks.append(formatted_chunk)
 
     final_text = "\n\n".join(processed_chunks)
+    logger.info("⏳ Đang gọi LLM để đánh giá semantic chunking...")
 
-    logger.info("⏳ Đang gọi Ollama LLM để đánh giá semantic chunking...")
-    llm_response = get_chunking_suggestions_ollama(summary_text, final_text)
-
+    llm_response = get_semantic_split_suggestions(summary_text, final_text)
     if not llm_response:
-        logger.error("❌ Không nhận được phản hồi từ Ollama.")
+        logger.error("❌ Không nhận được phản hồi từ bất kỳ LLM Provider nào.")
         return []
 
     logger.info(f"💡 LLM Response: {llm_response.strip()}")
-    final_sections = split_text_by_llm_suggestions(final_text, llm_response)
-
-    return final_sections
+    return split_text_by_llm_suggestions(final_text, llm_response)
 
 
 @dlt.resource(
