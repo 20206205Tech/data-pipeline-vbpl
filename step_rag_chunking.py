@@ -12,6 +12,7 @@ import env
 from rag import prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
+from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
     download_from_drive,
     get_drive_file_md5,
@@ -134,12 +135,22 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
             conn, "document_chunking", pending_item_ids, "md_hash", "drive_id"
         )
 
+        dict_statuses = get_document_statuses_from_db(conn, pending_item_ids)
+
         for item_id in pending_item_ids:
             item_folder = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_{item_id}")
             zip_base_path = os.path.join(PATH_FOLDER_OUTPUT, f"chunk_zip_{item_id}")
             zip_file_path = f"{zip_base_path}.zip"
 
             try:
+                raw_status = dict_statuses.get(str(item_id))
+                if is_document_invalid(raw_status):
+                    logger.info(
+                        f"⏭️ Bỏ qua {item_id}: Văn bản có trạng thái '{raw_status}'."
+                    )
+                    success_item_ids.append(item_id)
+                    continue
+
                 md_drive_id = dict_md_drive_ids.get(str(item_id))
 
                 summary_drive_id = dict_summary_drive_ids.get(str(item_id))

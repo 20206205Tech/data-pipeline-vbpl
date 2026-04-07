@@ -10,6 +10,7 @@ from loguru import logger
 import env
 from rag.vectorstore import pinecone_index, vectorstore
 from utils.config_by_path import ConfigByPath
+from utils.document_helper import is_document_invalid
 from utils.google_drive import (
     download_from_drive,
     get_drive_file_md5,
@@ -97,15 +98,9 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                     else "Chưa xác định"
                 )
 
-                status_to_delete = [
-                    "Hết hiệu lực toàn bộ",
-                    "Ngưng hiệu lực",
-                    "Không còn phù hợp",
-                ]
-
-                if safe_status in status_to_delete:
+                if is_document_invalid(raw_status):
                     logger.info(
-                        f"🗑️ Tài liệu {item_id} có trạng thái '{safe_status}'. Đang tiến hành xóa khỏi Vector DB..."
+                        f"🗑️ Tài liệu {item_id} có trạng thái '{raw_status}'. Đang tiến hành xóa khỏi Vector DB..."
                     )
 
                     try:
@@ -128,7 +123,7 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                         "vector_count": 0,
                         "status": "deleted",
                     }
-                    continue
+                    continue  # Xóa xong thì continue để không nhúng (embed) lại văn bản này nữa
 
                 context_drive_id = dict_context_drive_ids.get(str(item_id))
 

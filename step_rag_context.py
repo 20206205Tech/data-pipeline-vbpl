@@ -11,6 +11,7 @@ import env
 from rag import prompt
 from rag.ollama_client import call_ollama
 from utils.config_by_path import ConfigByPath
+from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
     download_from_drive,
     get_drive_file_md5,
@@ -79,6 +80,8 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
             conn, "document_context", pending_item_ids, "summary_md5", "chunk_md5"
         )
 
+        dict_statuses = get_document_statuses_from_db(conn, pending_item_ids)
+
         for item_id in pending_item_ids:
             item_workspace = os.path.join(PATH_FOLDER_OUTPUT, f"workspace_{item_id}")
             zip_base_output_path = os.path.join(
@@ -87,6 +90,14 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
             final_zip_path = f"{zip_base_output_path}.zip"
 
             try:
+                raw_status = dict_statuses.get(str(item_id))
+                if is_document_invalid(raw_status):
+                    logger.info(
+                        f"⏭️ Bỏ qua {item_id}: Văn bản có trạng thái '{raw_status}'."
+                    )
+                    success_item_ids.append(item_id)
+                    continue
+
                 summary_drive_id = dict_summary_drive_ids.get(str(item_id))
                 chunk_drive_id = dict_chunk_drive_ids.get(str(item_id))
 
