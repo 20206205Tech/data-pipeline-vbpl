@@ -62,7 +62,7 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=50,
+            limit=150,
         )
 
         if not pending_item_ids:
