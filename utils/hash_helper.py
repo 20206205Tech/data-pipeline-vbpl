@@ -15,35 +15,9 @@ def calculate_file_md5(file_path):
         return None
 
 
-# def get_existing_drive_id_from_db(conn, table_name, item_id, file_id_column="drive_id"):
-#     try:
-#         with conn.cursor() as cur:
-#             cur.execute(
-#                 f"""
-#                 SELECT {file_id_column}
-#                 FROM "public"."{table_name}"
-#                 WHERE item_id = %s
-#                 """,
-#                 (str(item_id),),
-#             )
-#             row = cur.fetchone()
-#             if row:
-#                 return row[0]
-#     except psycopg2.errors.UndefinedTable:
-#         conn.rollback()
-#     except Exception as e:
-#         logger.debug(f"Lỗi truy vấn drive_id cho {item_id} ở bảng {table_name}: {e}")
-#         conn.rollback()
-#     return None
-
-
 def get_existing_drive_ids_from_db(
     conn, table_name, item_ids, file_id_column="drive_id"
 ):
-    """
-    Lấy danh sách drive_id cho nhiều item_id cùng lúc (Bulk Fetch).
-    Trả về: Dictionary { 'item_id': 'drive_id' }
-    """
     if not item_ids:
         return {}
 
@@ -76,30 +50,6 @@ def get_existing_drive_ids_from_db(
         conn.rollback()
 
     return {}
-
-
-# def get_existing_hash_from_db(
-#     conn, table_name, item_id, file_hash_column, file_id_column="drive_id"
-# ):
-#     try:
-#         with conn.cursor() as cur:
-#             cur.execute(
-#                 f"""
-#                 SELECT {file_hash_column}, {file_id_column}
-#                 FROM "public"."{table_name}"
-#                 WHERE item_id = %s
-#                 """,
-#                 (str(item_id),),
-#             )
-#             row = cur.fetchone()
-#             if row:
-#                 return row[0], row[1]
-#     except psycopg2.errors.UndefinedTable:
-#         conn.rollback()
-#     except Exception as e:
-#         logger.debug(f"Lỗi truy vấn hash cũ cho {item_id} ở bảng {table_name}: {e}")
-#         conn.rollback()
-#     return None, None
 
 
 def get_existing_hashes_from_db(

@@ -9,8 +9,8 @@ from langchain_core.messages import SystemMessage
 from loguru import logger
 
 import env
-from rag import prompt
 from rag.llm import invoke_llm_chain
+from rag.prompt import chunking_prompt
 from utils.config_by_path import ConfigByPath
 from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
@@ -36,7 +36,7 @@ PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 def get_semantic_split_suggestions(summary_text, chunked_text):
     messages = [
         SystemMessage(
-            content=prompt.CHUNKING_PROMPT.format(
+            content=chunking_prompt.CHUNKING_PROMPT.format(
                 summary=summary_text, chunked_text=chunked_text
             )
         )
@@ -113,7 +113,7 @@ def document_chunking_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=150,
+            limit=40,
         )
 
         if not pending_item_ids:

@@ -95,20 +95,22 @@ def upload_to_drive(service, file_path, folder_id):
 
 
 def get_drive_url(drive_id, is_folder=False):
-    """Tạo link mở nhanh trên trình duyệt"""
     if is_folder:
         return f"https://drive.google.com/drive/folders/{drive_id}"
     return f"https://drive.google.com/file/d/{drive_id}/view"
 
 
 def download_from_drive(service, file_id):
-    """Hàm util thuần túy để tải data từ Google Drive"""
+    file_url = get_drive_url(file_id)
+    logger.debug(f"Đang tải file từ URL: {file_url}")
+
     request = service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while not done:
         status, done = downloader.next_chunk()
+
     return fh.getvalue()
 
 

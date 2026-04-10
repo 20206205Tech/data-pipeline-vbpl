@@ -6,10 +6,10 @@ on:
     branches: [main]
     paths:
       - "workflow_config.py"
-  pull_request:
-    branches: [main]
-    paths:
-      - "workflow_config.py"
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - "workflow_config.py"
 
 jobs:
   step_setup_workflow:

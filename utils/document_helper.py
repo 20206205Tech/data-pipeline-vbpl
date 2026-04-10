@@ -1,7 +1,7 @@
 import psycopg2
 from loguru import logger
 
-# Danh sách các trạng thái cần bỏ qua (có thể cấu hình thêm sau này)
+# Danh sách các trạng thái cần bỏ qua
 STATUS_TO_SKIP = [
     "Hết hiệu lực toàn bộ",
     "Ngưng hiệu lực",

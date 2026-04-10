@@ -7,8 +7,8 @@ from langchain_core.messages import SystemMessage
 from loguru import logger
 
 import env
-from rag import prompt
 from rag.llm import invoke_llm_chain
+from rag.prompt import summary_prompt
 from utils.config_by_path import ConfigByPath
 from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
@@ -34,7 +34,7 @@ PATH_FOLDER_OUTPUT = config_by_path.PATH_FOLDER_OUTPUT
 def generate_document_summary(text_content):
     messages = [
         SystemMessage(
-            content=prompt.SUMMARY_SYSTEM_PROMPT.format(document=text_content)
+            content=summary_prompt.SUMMARY_PROMPT.format(document=text_content)
         )
     ]
     return invoke_llm_chain(messages)
@@ -54,7 +54,7 @@ def document_summary_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=150,
+            limit=40,
         )
 
         if not pending_item_ids:

@@ -8,8 +8,8 @@ from langchain_core.messages import SystemMessage
 from loguru import logger
 
 import env
-from rag import prompt
 from rag.llm import invoke_llm_chain
+from rag.prompt import contextualizer_prompt
 from utils.config_by_path import ConfigByPath
 from utils.document_helper import get_document_statuses_from_db, is_document_invalid
 from utils.google_drive import (
@@ -36,7 +36,7 @@ def generate_chunk_context(summary_text, chunk_text):
     """Sinh ngữ cảnh dẫn nhập cho từng chunk"""
     messages = [
         SystemMessage(
-            content=prompt.CONTEXTUALIZER_PROMPT.format(
+            content=contextualizer_prompt.CONTEXTUALIZER_PROMPT.format(
                 summary=summary_text, chunk=chunk_text
             )
         )
@@ -62,7 +62,7 @@ def document_context_resource(success_item_ids: list, error_item_ids: list):
         pending_item_ids = fetch_and_lock_pending_tasks(
             conn=conn,
             step_code=config_by_path.NAME,
-            limit=150,
+            limit=40,
         )
 
         if not pending_item_ids:
