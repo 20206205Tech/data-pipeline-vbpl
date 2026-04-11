@@ -13,6 +13,9 @@ env = Env()
 logger.info("Loading environment variables...")
 
 
+ENVIRONMENT = env.str("ENVIRONMENT", "production")
+
+
 PATH_FILE_ENV = os.path.abspath(__file__)
 PATH_FOLDER_PROJECT = os.path.dirname(PATH_FILE_ENV)
 PATH_FOLDER_DATA = os.path.join(PATH_FOLDER_PROJECT, "data")
@@ -27,8 +30,11 @@ if not os.path.exists(PATH_FOLDER_DOCS):
 
 
 CRAWL_DATA_ENV_DEV = False
-
 CRAWL_DATA_OPEN_IN_BROWSER = False
+
+# if ENVIRONMENT == "development":
+#     CRAWL_DATA_ENV_DEV = True
+#     CRAWL_DATA_OPEN_IN_BROWSER = True
 
 
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
@@ -37,9 +43,6 @@ os.environ["LANGSMITH_TRACING"] = "false"
 
 PINECONE_API_KEY = env.str("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = env.str("PINECONE_INDEX_NAME", default="vbpl")
-
-
-ENVIRONMENT = env.str("ENVIRONMENT", "production")
 
 
 DATA_PIPELINE_VBPL_DATABASE_URL = env.str("DATA_PIPELINE_VBPL_DATABASE_URL")
