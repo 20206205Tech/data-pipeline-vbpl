@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 from datetime import datetime
 
 import dlt
@@ -105,6 +106,8 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
 
                     try:
                         pinecone_index.delete(filter={"item_id": {"$eq": str(item_id)}})
+                        # <--- HÃM TỐC ĐỘ LẠI Ở ĐÂY (Tối đa 4 req/giây)
+                        time.sleep(0.25)
                         logger.success(
                             f"✅ Đã xóa vector cũ của {item_id} trên vectorDB."
                         )
@@ -123,7 +126,8 @@ def document_embedding_resource(success_item_ids: list, error_item_ids: list):
                         "vector_count": 0,
                         "status": "deleted",
                     }
-                    continue  # Xóa xong thì continue để không nhúng (embed) lại văn bản này nữa
+                    # Xóa xong thì continue để không nhúng (embed) lại văn bản này nữa
+                    continue
 
                 context_drive_id = dict_context_drive_ids.get(str(item_id))
 

@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 import dlt
@@ -29,6 +30,7 @@ def main():
                 JOIN "public"."document_info" di ON ds.item_id = di.item_id
                 WHERE ds.workflow_id = %s
                   AND di.status IN %s
+                LIMIT 200
             """
             cur.execute(query, (current_step_id, tuple(STATUS_TO_SKIP)))
             rows = cur.fetchall()
@@ -46,6 +48,10 @@ def main():
             try:
                 # Xóa toàn bộ chunk vector của item_id này (giống logic trong step_rag_embedding)
                 pinecone_index.delete(filter={"item_id": {"$eq": str(item_id)}})
+
+                # Pinecone giới hạn 5 req/sec (delete by metadata).
+                # Nghỉ 0.25s để duy trì tốc độ 4 req/sec, tránh dính lỗi "Too Many Requests"
+                time.sleep(0.25)
             except Exception as e:
                 logger.warning(f"Lỗi khi xóa vector của {item_id} trên Pinecone: {e}")
 

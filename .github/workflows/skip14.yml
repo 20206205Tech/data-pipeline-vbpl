@@ -1,10 +1,12 @@
-name: temp14
+name: skip14_trigger
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [skip14_trigger]
 
 jobs:
-  temp14:
+  skip14:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
