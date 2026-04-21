@@ -259,7 +259,7 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{{{ secrets.DOPPLER_TOKEN }}}}
         run: |
-          doppler run -p 20206205tech -c prd -- uv run python {code}.py
+          doppler run -p 20206205tech -c prod -- uv run python {code}.py
 """
             yaml_content += step_block
 

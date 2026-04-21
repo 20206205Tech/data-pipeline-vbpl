@@ -33,11 +33,11 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          doppler run -p 20206205tech -c prd -- uv run python temp14.py
+          doppler run -p 20206205tech -c prod -- uv run python temp14.py
 
       - name: step_clean_document_pending
         if: always()
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          doppler run -p 20206205tech -c prd -- uv run python step_clean_document_pending.py
+          doppler run -p 20206205tech -c prod -- uv run python step_clean_document_pending.py
