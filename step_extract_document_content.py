@@ -119,7 +119,9 @@ def document_content_resource(success_item_ids: list, error_item_ids: list):
                         continue
 
                 new_clean_drive_id = upload_to_drive(
-                    drive_service, file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
+                    drive_service,
+                    file_path,
+                    config_by_path.GOOGLE_DRIVE_FOLDER_ID_DATA_PIPELINE_VBPL,
                 )
 
                 if not new_clean_drive_id:

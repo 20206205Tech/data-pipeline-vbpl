@@ -16,7 +16,7 @@ from utils.google_drive import get_drive_file_md5, get_drive_service
 # Ép thời gian chờ tối đa cho mọi request mạng là 60 giây
 socket.setdefaulttimeout(60)
 
-LIST_FOLDER_ID = [config_by_path.GOOGLE_DRIVE_FOLDER_ID]
+LIST_FOLDER_ID = [config_by_path.GOOGLE_DRIVE_FOLDER_ID_DATA_PIPELINE_VBPL]
 
 
 def get_existing_data(conn):

@@ -146,7 +146,7 @@
 #                 # 8. Upload ZIP lên Google Drive
 #                 logger.info(f"☁️ Đang tải file nén lên Google Drive...")
 #                 new_drive_id = upload_to_drive(
-#                     drive_service, zip_file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID
+#                     drive_service, zip_file_path, config_by_path.GOOGLE_DRIVE_FOLDER_ID_DATA_PIPELINE_VBPL
 #                 )
 
 #                 if new_drive_id:
