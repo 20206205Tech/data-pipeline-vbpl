@@ -39,7 +39,7 @@ class DocumentListSpider(scrapy.Spider):
             cursor.execute(sql_query)
             records = cursor.fetchall()
 
-            diff = 5 if env.CRAWL_DATA_ENV_DEV else 5000
+            diff = 5 if env.CRAWL_DATA_ENV_DEV else 500
 
             if len(records) >= 2:
                 latest = records[0][0]
