@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.14.3",
-    "dlt[postgres]>=1.24.0",
+    "dlt[postgres]>=1.27.0",
     "environs>=14.6.0",
     "google-api-python-client>=2.196.0",
     "google-auth-httplib2>=0.3.0",
