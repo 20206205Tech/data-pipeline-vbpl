@@ -62,11 +62,14 @@ GOOGLE_DRIVE_FOLDER_ID_DATA_PIPELINE_VBPL = env.str(
 )
 
 
-OLLAMA_URL = "https://ollama.20206205.tech"
-OLLAMA_URL = "http://localhost:11434"
-OLLAMA_URL = "https://colab.20206205.tech"
+# OLLAMA_URL = "https://ollama.20206205.tech"
+# OLLAMA_URL = "http://localhost:11434"
+# OLLAMA_URL = "https://colab.20206205.tech"
 
-WEBHOOK_OLLAMA_URL = "https://webhook.20206205.tech/send-data"
+# WEBHOOK_OLLAMA_URL = "https://webhook.20206205.tech/send-data"
+
+OLLAMA_URL = "http://134.185.92.211/ollama"
+OLLAMA_API_KEY = env.str("OLLAMA_API_KEY")
 
 
 # print("*" * 100)
@@ -76,10 +79,10 @@ WEBHOOK_OLLAMA_URL = "https://webhook.20206205.tech/send-data"
 # print("*" * 100)
 
 
-NVIDIA_API_KEY = env.str("NVIDIA_API_KEY")
+# NVIDIA_API_KEY = env.str("NVIDIA_API_KEY")
 
 
-CLOUDFLARE_ACCOUNT_ID = env.str("CLOUDFLARE_ACCOUNT_ID")
-CLOUDFLARE_API_TOKEN = env.str("CLOUDFLARE_API_TOKEN")
+# CLOUDFLARE_ACCOUNT_ID = env.str("CLOUDFLARE_ACCOUNT_ID")
+# CLOUDFLARE_API_TOKEN = env.str("CLOUDFLARE_API_TOKEN")
 
-GROQ_API_KEY = env.str("GROQ_API_KEY")
+# GROQ_API_KEY = env.str("GROQ_API_KEY")
