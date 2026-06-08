@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "beautifulsoup4>=4.14.3",
+    "beautifulsoup4>=4.15.0",
     "dlt[postgres]>=1.27.2",
     "environs>=14.6.0",
     "google-api-python-client>=2.197.0",
