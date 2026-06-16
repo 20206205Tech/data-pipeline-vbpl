@@ -22,7 +22,7 @@ dependencies = [
     "psycopg2-binary>=2.9.12",
     "scrapy>=2.16.0",
     "scrapy-user-agents>=0.1.1",
-    "sentence-transformers>=5.5.1",
+    "sentence-transformers>=5.6.0",
     "torch>=2.12.0",
 ]
 
